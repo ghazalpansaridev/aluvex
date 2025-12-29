@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "MyApp1208",
+    "scheme": "MyApp1208",
     "slug": "MyApp1208",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -24,7 +25,12 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ]
   }
 }
