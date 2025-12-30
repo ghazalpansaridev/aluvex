@@ -1,12 +1,26 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../lib/auth-context';
 
 export default function Index() {
   const router = useRouter();
+  const { logout } = useAuth();
 
   const handlePress = () => {
     console.log('Navigating to categories...');
     router.push('/categories');
+  };
+
+  const handleLogout = async () => {
+    console.log('Logout button pressed'); // Debug log
+    try {
+      await logout();
+      console.log('Logged out successfully'); // Debug log
+      router.replace('/phone-auth');
+      console.log('Navigation called'); // Debug log
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   return (
@@ -24,6 +38,18 @@ export default function Index() {
         >
           <Text style={styles.buttonText}>View Categories</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={() => {
+            console.log('LOGOUT BUTTON CLICKED!!!');
+            handleLogout();
+          }}
+          activeOpacity={0.7}
+          testID="logout-button"
+        >
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -39,6 +65,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    paddingBottom: 40,
   },
   container: {
     width: '100%',
@@ -68,6 +95,28 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#ffffff',
     fontSize: 18,
+    fontWeight: '600',
+  },
+  logoutButton: {
+    marginTop: 20,
+    paddingHorizontal: 40,
+    paddingVertical: 14,
+    borderRadius: 10,
+    minWidth: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#ff3b30',
+    backgroundColor: '#ffffff',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  logoutText: {
+    color: '#ff3b30',
+    fontSize: 16,
     fontWeight: '600',
   },
 });
