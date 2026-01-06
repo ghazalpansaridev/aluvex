@@ -1,70 +1,42 @@
 import 'react-native-url-polyfill/auto'
 import { createClient } from '@supabase/supabase-js'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import * as SecureStore from 'expo-secure-store'
-import * as aesjs from 'aes-js'
-import 'react-native-get-random-values'
-
 
 const supabaseUrl = "https://pcbeiqmfjettsmpnhsxv.supabase.co"
 const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjYmVpcW1mamV0dHNtcG5oc3h2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5ODQxNzUsImV4cCI6MjA4MjU2MDE3NX0.j485Hf2WTgVu_AzhE_LiSif7L9j8i6egRbToI8WtrIw"
 
-
-// As Expo's SecureStore does not support values larger than 2048
-// bytes, an AES-256 key is generated and stored in SecureStore, while
-// it is used to encrypt/decrypt values stored in AsyncStorage.
-class LargeSecureStore {
-  private async _encrypt(key: string, value: string) {
-    const encryptionKey = crypto.getRandomValues(new Uint8Array(256 / 8))
-
-    const cipher = new aesjs.ModeOfOperation.ctr(encryptionKey, new aesjs.Counter(1))
-    const encryptedBytes = cipher.encrypt(aesjs.utils.utf8.toBytes(value))
-
-    await SecureStore.setItemAsync(key, aesjs.utils.hex.fromBytes(encryptionKey))
-
-    return aesjs.utils.hex.fromBytes(encryptedBytes)
-  }
-
-  private async _decrypt(key: string, value: string) {
-    const encryptionKeyHex = await SecureStore.getItemAsync(key)
-    if (!encryptionKeyHex) {
-      return encryptionKeyHex
+// Simple storage adapter using AsyncStorage directly
+// This avoids SecureStore compatibility issues
+const storageAdapter = {
+  getItem: async (key: string): Promise<string | null> => {
+    try {
+      return await AsyncStorage.getItem(key)
+    } catch (error) {
+      console.error('Error getting item from storage:', error)
+      return null
     }
-
-    const cipher = new aesjs.ModeOfOperation.ctr(
-      aesjs.utils.hex.toBytes(encryptionKeyHex),
-      new aesjs.Counter(1)
-    )
-    const decryptedBytes = cipher.decrypt(aesjs.utils.hex.toBytes(value))
-
-    return aesjs.utils.utf8.fromBytes(decryptedBytes)
-  }
-
-  async getItem(key: string) {
-    const encrypted = await AsyncStorage.getItem(key)
-    if (!encrypted) {
-      return encrypted
+  },
+  setItem: async (key: string, value: string): Promise<void> => {
+    try {
+      await AsyncStorage.setItem(key, value)
+    } catch (error) {
+      console.error('Error setting item in storage:', error)
+      throw error
     }
-
-    return await this._decrypt(key, encrypted)
-  }
-
-  async removeItem(key: string) {
-    await AsyncStorage.removeItem(key)
-    await SecureStore.deleteItemAsync(key)
-  }
-
-  async setItem(key: string, value: string) {
-    const encrypted = await this._encrypt(key, value)
-
-    await AsyncStorage.setItem(key, encrypted)
-  }
+  },
+  removeItem: async (key: string): Promise<void> => {
+    try {
+      await AsyncStorage.removeItem(key)
+    } catch (error) {
+      console.error('Error removing item from storage:', error)
+      throw error
+    }
+  },
 }
-
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: new LargeSecureStore(),
+    storage: storageAdapter,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,

@@ -16,7 +16,7 @@ export default function Index() {
     try {
       await logout();
       console.log('Logged out successfully'); // Debug log
-      router.replace('/phone-auth');
+      router.replace('/auth');
       console.log('Navigation called'); // Debug log
     } catch (error) {
       console.error('Logout error:', error);

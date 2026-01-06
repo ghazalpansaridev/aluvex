@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { useRouter, Redirect } from 'expo-router';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../lib/auth-context';
 
 interface Subcategory {
   id: string;
@@ -21,14 +22,13 @@ interface Category {
 
 export default function CategoriesPage() {
   const router = useRouter();
+  const { logout, session, loading: authLoading } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
+  // Define fetchCategories before using it in useEffect
   const fetchCategories = async () => {
     try {
       setLoading(true);
@@ -61,8 +61,68 @@ export default function CategoriesPage() {
     }
   };
 
+  // All hooks must be called before any early returns
+  useEffect(() => {
+    if (session) {
+      fetchCategories();
+    }
+  }, [session]);
+
+  // Watch for session becoming null and navigate
+  useEffect(() => {
+    if (isLoggingOut && !session) {
+      setIsLoggingOut(false);
+      router.replace('/auth');
+    }
+  }, [session, isLoggingOut, router]);
+
+  // Protect route - redirect to auth if no session (after all hooks)
+  if (authLoading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (!session) {
+    return <Redirect href="/auth" />;
+  }
+
   const handleCategoryPress = (categoryId: string) => {
     router.push(`/categories/${categoryId}`);
+  };
+
+  const performLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      await logout();
+      // Navigation will happen via useEffect when session becomes null
+      // Also try direct navigation
+      router.replace('/auth');
+    } catch (error) {
+      setIsLoggingOut(false);
+      router.replace('/auth');
+    }
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: performLogout,
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -117,6 +177,31 @@ export default function CategoriesPage() {
           </View>
         }
       />
+      {/* Move logout button outside FlatList for better touch handling */}
+      <View style={styles.logoutContainer}>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={async () => {
+            console.log('LOGOUT BUTTON CLICKED!');
+            try {
+              // Perform logout directly
+              console.log('Starting logout...');
+              await logout();
+              console.log('Logout completed, navigating...');
+              
+              // Navigate immediately
+              router.replace('/auth');
+              console.log('Navigation called');
+            } catch (error) {
+              console.error('Logout error:', error);
+              router.replace('/auth');
+            }
+          }}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.logoutButtonText}>Logout</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -199,5 +284,30 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: '#999',
+  },
+  logoutContainer: {
+    padding: 16,
+    paddingBottom: 20,
+    backgroundColor: '#f5f5f5',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  logoutButton: {
+    backgroundColor: '#ff3b30',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  logoutButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

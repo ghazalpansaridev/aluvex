@@ -18,7 +18,7 @@ import { useAuth } from './lib/auth-context';
 
 export default function PhoneAuth() {
   const router = useRouter();
-  const { setVerified } = useAuth();
+  const { setPhoneVerified } = useAuth();
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
@@ -91,13 +91,17 @@ export default function PhoneAuth() {
       console.log('Verify OTP Response:', response); // Debug log
       
       if (response.success && response.verified) {
-        await setVerified(true);
-        // Navigate immediately, show alert after
-        router.replace('/(b2b)');
-        // Show success message briefly
+        // Set phone verified and wait for it to complete
+        await setPhoneVerified(true);
+        console.log('Phone verification set, navigating to categories...');
+        // Navigate to categories after ensuring state is updated
         setTimeout(() => {
-          Alert.alert('Success', 'Phone number verified successfully!');
-        }, 100);
+          router.replace('/categories');
+          // Show success message briefly
+          setTimeout(() => {
+            Alert.alert('Success', 'Phone number verified successfully!');
+          }, 200);
+        }, 200);
       } else {
         const errorMsg = response.message || response.error || 'OTP verification failed';
         setError(errorMsg);
