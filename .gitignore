@@ -213,3 +213,4 @@ Thumbs.db
 
 supabase/.temp/
 supabase/migrations/001_create_otp_table.sql
+package-lock.json

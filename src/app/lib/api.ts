@@ -1,5 +1,7 @@
-const SUPABASE_URL = 'https://pcbeiqmfjettsmpnhsxv.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjYmVpcW1mamV0dHNtcG5oc3h2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5ODQxNzUsImV4cCI6MjA4MjU2MDE3NX0.j485Hf2WTgVu_AzhE_LiSif7L9j8i6egRbToI8WtrIw';
+import { config } from './config';
+
+const SUPABASE_URL = config.supabaseUrl;
+const SUPABASE_ANON_KEY = config.supabaseAnonKey;
 
 export interface SendOTPResponse {
   success: boolean;

@@ -1,9 +1,10 @@
 import 'react-native-url-polyfill/auto'
 import { createClient } from '@supabase/supabase-js'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { config } from './config'
 
-const supabaseUrl = "https://pcbeiqmfjettsmpnhsxv.supabase.co"
-const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjYmVpcW1mamV0dHNtcG5oc3h2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5ODQxNzUsImV4cCI6MjA4MjU2MDE3NX0.j485Hf2WTgVu_AzhE_LiSif7L9j8i6egRbToI8WtrIw"
+const supabaseUrl = config.supabaseUrl
+const supabaseAnonKey = config.supabaseAnonKey
 
 // Simple storage adapter using AsyncStorage directly
 // This avoids SecureStore compatibility issues
