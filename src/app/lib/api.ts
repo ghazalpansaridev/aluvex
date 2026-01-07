@@ -21,6 +21,12 @@ export interface CheckEmailExistsResponse {
   error?: string;
 }
 
+export interface SavePhoneVerificationResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
 export async function sendOTP(phoneNumber: string): Promise<SendOTPResponse> {
   try {
     const response = await fetch(`${SUPABASE_URL}/functions/v1/send-otp`, {
@@ -58,7 +64,9 @@ export async function sendOTP(phoneNumber: string): Promise<SendOTPResponse> {
 
 export async function verifyOTP(
   phoneNumber: string,
-  otpCode: string
+  otpCode: string,
+  userId?: string,
+  isSignup?: boolean
 ): Promise<VerifyOTPResponse> {
   try {
     const response = await fetch(`${SUPABASE_URL}/functions/v1/verify-otp`, {
@@ -67,7 +75,12 @@ export async function verifyOTP(
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       },
-      body: JSON.stringify({ phone: phoneNumber, code: otpCode }),
+      body: JSON.stringify({ 
+        phone: phoneNumber, 
+        code: otpCode,
+        user_id: userId,
+        is_signup: isSignup || false,
+      }),
     });
 
     const data = await response.json();
@@ -248,6 +261,56 @@ export async function checkEmailExists(email: string, supabaseClient: any): Prom
     // For other errors, allow proceeding
     return {
       exists: false,
+    };
+  }
+}
+
+export async function savePhoneVerificationForSignup(
+  userId: string,
+  phoneNumber: string,
+  aadhaar?: string,
+  gstNumber?: string
+): Promise<SavePhoneVerificationResponse> {
+  try {
+    // This will be called from the client, so we need to use an edge function
+    // or update user metadata directly via Supabase client
+    // For now, we'll create an edge function call, but we can also do it client-side
+    // Since we need service role for admin operations, let's create an edge function
+    
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/save-phone-verification`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({
+        user_id: userId,
+        phone_number: phoneNumber,
+        aadhaar: aadhaar,
+        gst_number: gstNumber,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.error || 'Failed to save phone verification',
+        error: data.error,
+      };
+    }
+
+    return {
+      success: true,
+      message: data.message || 'Phone verification saved successfully',
+    };
+  } catch (error) {
+    console.error('Error saving phone verification:', error);
+    return {
+      success: false,
+      message: 'Network error. Please try again.',
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }

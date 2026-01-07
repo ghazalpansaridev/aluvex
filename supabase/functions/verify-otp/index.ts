@@ -21,7 +21,7 @@ serve(async (req) => {
       throw new Error('Supabase credentials not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY as environment variables.');
     }
     // Parse request body
-    const { phone, code } = await req.json();
+    const { phone, code, user_id, is_signup } = await req.json();
 
     // Validate inputs
     if (!phone || !/^\d{10}$/.test(phone)) {
@@ -120,6 +120,63 @@ serve(async (req) => {
       .from('otp_verifications')
       .delete()
       .eq('phone_number', phone);
+
+    // If this is a login user (not signup), save phone verification to user metadata
+    if (user_id && !is_signup) {
+      try {
+        // First, get current user to preserve existing metadata
+        const getUserResponse = await fetch(
+          `${SUPABASE_URL}/auth/v1/admin/users/${user_id}`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              'apikey': SUPABASE_SERVICE_ROLE_KEY,
+            },
+          }
+        );
+
+        let currentMetadata = {};
+        if (getUserResponse.ok) {
+          const userData = await getUserResponse.json();
+          currentMetadata = userData.user_metadata || {};
+        }
+
+        // Merge with existing metadata
+        const updatedMetadata = {
+          ...currentMetadata,
+          phone_verified: true,
+          phone_number: phone,
+        };
+
+        // Use REST API to update user metadata
+        const updateResponse = await fetch(
+          `${SUPABASE_URL}/auth/v1/admin/users/${user_id}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              'apikey': SUPABASE_SERVICE_ROLE_KEY,
+            },
+            body: JSON.stringify({
+              user_metadata: updatedMetadata,
+            }),
+          }
+        );
+
+        if (!updateResponse.ok) {
+          const errorData = await updateResponse.text();
+          console.error('Error updating user metadata:', errorData);
+          // Still return success since OTP was verified, but log the error
+        } else {
+          console.log('Phone verification saved to user metadata for user:', user_id);
+        }
+      } catch (metadataError) {
+        console.error('Error saving phone verification to metadata:', metadataError);
+        // Continue - OTP verification was successful
+      }
+    }
 
     return new Response(
       JSON.stringify({

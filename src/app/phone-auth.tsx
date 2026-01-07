@@ -11,14 +11,16 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { sendOTP, verifyOTP } from './lib/api';
 import { useAuth } from './lib/auth-context';
 
 export default function PhoneAuth() {
   const router = useRouter();
-  const { setPhoneVerified } = useAuth();
+  const params = useLocalSearchParams();
+  const { setPhoneVerified, user, isPhoneVerified } = useAuth();
+  const isSignup = params.isSignup === 'true';
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
@@ -33,6 +35,27 @@ export default function PhoneAuth() {
 
   // Validate OTP (exactly 6 digits)
   const isValidOTP = /^\d{6}$/.test(otpCode);
+
+  // Check if phone is already verified on mount
+  useEffect(() => {
+    if (isPhoneVerified) {
+      // Phone already verified, redirect appropriately
+      // Check if phone is verified in DB (means registration is complete) or only in AsyncStorage (signup user needs registration)
+      const dbVerified = user?.user_metadata?.phone_verified === true;
+      const hasRegistrationData = user?.user_metadata?.aadhaar || user?.user_metadata?.gst_number;
+      
+      // If verified in DB or has registration data, go to categories
+      // Otherwise, if isSignup flag is set or no registration data, go to registration
+      if (dbVerified || hasRegistrationData) {
+        router.replace('/categories');
+      } else if (isSignup) {
+        router.replace('/registration');
+      } else {
+        // Default to categories if unsure
+        router.replace('/categories');
+      }
+    }
+  }, [isPhoneVerified, isSignup, user]);
 
   // Resend cooldown timer
   useEffect(() => {
@@ -86,22 +109,36 @@ export default function PhoneAuth() {
     setError(null);
 
     try {
-      const response = await verifyOTP(phoneNumber, otpCode);
+      const userId = user?.id;
+      const response = await verifyOTP(phoneNumber, otpCode, userId, isSignup);
       
       console.log('Verify OTP Response:', response); // Debug log
       
       if (response.success && response.verified) {
-        // Set phone verified and wait for it to complete
-        await setPhoneVerified(true);
-        console.log('Phone verification set, navigating to categories...');
-        // Navigate to categories after ensuring state is updated
-        setTimeout(() => {
-          router.replace('/categories');
-          // Show success message briefly
+        if (isSignup) {
+          // For signup users, only save to AsyncStorage (not DB yet)
+          // DB save will happen after registration form completion
+          await setPhoneVerified(true, false); // false = don't save to DB
+          // Store phone number temporarily for registration form
+          await AsyncStorage.setItem('@verified_phone_number', phoneNumber);
+          console.log('Phone verification set (signup), navigating to registration...');
           setTimeout(() => {
-            Alert.alert('Success', 'Phone number verified successfully!');
+            router.replace('/registration');
+            setTimeout(() => {
+              Alert.alert('Success', 'Phone number verified successfully!');
+            }, 200);
           }, 200);
-        }, 200);
+        } else {
+          // For login users, save to both AsyncStorage and DB
+          await setPhoneVerified(true, true); // true = save to DB
+          console.log('Phone verification set (login), navigating to categories...');
+          setTimeout(() => {
+            router.replace('/categories');
+            setTimeout(() => {
+              Alert.alert('Success', 'Phone number verified successfully!');
+            }, 200);
+          }, 200);
+        }
       } else {
         const errorMsg = response.message || response.error || 'OTP verification failed';
         setError(errorMsg);

@@ -246,9 +246,9 @@ export default function Auth() {
         return;
       }
 
-      // Account created successfully, navigate to phone verification
+      // Account created successfully, navigate to phone verification with signup flag
       Alert.alert('Success', 'Account created successfully!');
-      router.replace('/phone-auth');
+      router.replace('/phone-auth?isSignup=true');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.';
       setError(errorMessage);

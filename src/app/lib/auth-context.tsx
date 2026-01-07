@@ -8,7 +8,8 @@ interface AuthContextType {
   user: User | null;
   isPhoneVerified: boolean;
   loading: boolean;
-  setPhoneVerified: (verified: boolean) => Promise<void>;
+  setPhoneVerified: (verified: boolean, saveToDB?: boolean) => Promise<void>;
+  savePhoneVerificationForSignup: (phoneNumber: string, aadhaar?: string, gstNumber?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -24,10 +25,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkPhoneVerificationStatus = async () => {
     try {
+      // First check database (user metadata) - primary source
+      if (user) {
+        const userMetadata = user.user_metadata || {};
+        const dbVerified = userMetadata.phone_verified === true;
+        
+        if (dbVerified) {
+          setIsPhoneVerified(true);
+          // Sync AsyncStorage with DB
+          await AsyncStorage.setItem(PHONE_VERIFICATION_KEY, 'true');
+          console.log('Phone verification status from DB:', true);
+          return true;
+        }
+      }
+      
+      // Fallback to AsyncStorage (for signup users who haven't completed registration)
       const status = await AsyncStorage.getItem(PHONE_VERIFICATION_KEY);
       const verified = status === 'true';
       setIsPhoneVerified(verified);
-      console.log('Phone verification status checked:', verified);
+      console.log('Phone verification status from AsyncStorage:', verified);
       return verified;
     } catch (error) {
       console.error('Error checking phone verification status:', error);
@@ -39,12 +55,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Check phone verification status on mount and when session changes
     const initializeAuth = async () => {
-      await checkPhoneVerificationStatus();
-      
-      // Get initial session
+      // Get initial session first
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
       setUser(session?.user ?? null);
+      
+      // Then check phone verification status (needs user to be set)
+      await checkPhoneVerificationStatus();
       setLoading(false);
     };
 
@@ -67,11 +84,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const setPhoneVerified = async (verified: boolean) => {
+  // Re-check phone verification when user changes
+  useEffect(() => {
+    if (user) {
+      checkPhoneVerificationStatus();
+    }
+  }, [user?.id]);
+
+  const setPhoneVerified = async (verified: boolean, saveToDB: boolean = true) => {
     try {
-      console.log('Setting phone verified to:', verified);
+      console.log('Setting phone verified to:', verified, 'saveToDB:', saveToDB);
+      
+      // Always save to AsyncStorage
       await AsyncStorage.setItem(PHONE_VERIFICATION_KEY, verified.toString());
       setIsPhoneVerified(verified);
+      
+      // If saveToDB is true and user exists, also save to database (user metadata)
+      if (saveToDB && verified && user) {
+        try {
+          const currentMetadata = user.user_metadata || {};
+          const updatedMetadata = {
+            ...currentMetadata,
+            phone_verified: true,
+          };
+
+          const { error: updateError } = await supabase.auth.updateUser({
+            data: updatedMetadata,
+          });
+
+          if (updateError) {
+            console.error('Error updating user metadata:', updateError);
+            // Still continue - AsyncStorage is updated
+          } else {
+            console.log('Phone verification saved to user metadata');
+            // Refresh user to get updated metadata
+            const { data: { user: updatedUser } } = await supabase.auth.getUser();
+            if (updatedUser) {
+              setUser(updatedUser);
+            }
+          }
+        } catch (dbError) {
+          console.error('Error saving to database:', dbError);
+          // Continue - AsyncStorage is updated
+        }
+      }
+      
       // Double-check to ensure it was saved
       const status = await AsyncStorage.getItem(PHONE_VERIFICATION_KEY);
       console.log('Phone verification status after setting:', status);
@@ -80,6 +137,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error('Error setting phone verification status:', error);
+    }
+  };
+
+  const savePhoneVerificationForSignup = async (
+    phoneNumber: string,
+    aadhaar?: string,
+    gstNumber?: string
+  ) => {
+    try {
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      console.log('Saving phone verification for signup user:', user.id);
+      
+      const currentMetadata = user.user_metadata || {};
+      const updatedMetadata = {
+        ...currentMetadata,
+        phone_verified: true,
+        phone_number: phoneNumber,
+        ...(aadhaar && { aadhaar }),
+        ...(gstNumber && { gst_number: gstNumber }),
+      };
+
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: updatedMetadata,
+      });
+
+      if (updateError) {
+        console.error('Error updating user metadata:', updateError);
+        throw updateError;
+      }
+
+      console.log('Phone verification and registration data saved to user metadata');
+      
+      // Update local state
+      setIsPhoneVerified(true);
+      await AsyncStorage.setItem(PHONE_VERIFICATION_KEY, 'true');
+      
+      // Refresh user to get updated metadata
+      const { data: { user: updatedUser } } = await supabase.auth.getUser();
+      if (updatedUser) {
+        setUser(updatedUser);
+      }
+    } catch (error) {
+      console.error('Error saving phone verification for signup:', error);
+      throw error;
     }
   };
 
@@ -142,7 +246,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Don't block rendering while loading - let children handle it
   return (
-    <AuthContext.Provider value={{ session, user, isPhoneVerified, loading, setPhoneVerified, logout }}>
+    <AuthContext.Provider value={{ 
+      session, 
+      user, 
+      isPhoneVerified, 
+      loading, 
+      setPhoneVerified, 
+      savePhoneVerificationForSignup,
+      logout 
+    }}>
       {children}
     </AuthContext.Provider>
   );
