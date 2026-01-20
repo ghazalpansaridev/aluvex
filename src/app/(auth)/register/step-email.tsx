@@ -40,7 +40,7 @@ export default function StepEmail({
     setLoading(true);
 
     try {
-      // Check if email already exists
+      // Check if email already exists (optional)
       const { data, error: checkError } = await supabase.functions.invoke('check-email-exists', {
         body: { email },
       });
@@ -54,13 +54,29 @@ export default function StepEmail({
         return;
       }
 
+      // Send OTP to email
+      console.log('Sending OTP to:', email);
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: email,
+        options: {
+          shouldCreateUser: true,
+        },
+      });
+
+      if (otpError) {
+        console.error('OTP send error:', otpError);
+        setFieldError(otpError.message || 'Failed to send verification code');
+        setLoading(false);
+        return;
+      }
+
+      console.log('OTP sent successfully');
       updateFormData({ email });
       onNext();
     } catch (err) {
-      console.log('Email check error:', err);
-      // Continue anyway if there's an error checking
-      updateFormData({ email });
-      onNext();
+      console.error('Email validation error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to send verification code';
+      setFieldError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -90,7 +106,7 @@ export default function StepEmail({
       />
 
       <Button
-        title="Continue"
+        title="Send Verification Code"
         onPress={handleNext}
         loading={loading}
         fullWidth

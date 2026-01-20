@@ -5,12 +5,13 @@ import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../lib/auth-context';
 
 import StepEmail from './step-email';
+import StepOTP from './step-otp';
 import StepBusiness from './step-business';
 import StepOwner from './step-owner';
 import StepPassword from './step-password';
 import { RegistrationFormData } from '../../../types';
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -47,23 +48,36 @@ export default function RegisterScreen() {
     setError(null);
 
     try {
-      // 1. Create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
+      // 1. Get current authenticated user (from OTP verification)
+      const { data: { user }, error: getUserError } = await supabase.auth.getUser();
+      
+      if (getUserError || !user) {
+        throw new Error('User session not found. Please start registration again.');
+      }
+
+      // 2. Update user password and metadata
+      const { error: updateError } = await supabase.auth.updateUser({
         password: formData.password,
-        options: {
-          data: {
-            role: 'retailer',
-          },
+        data: {
+          role: 'retailer',
         },
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Failed to create user');
+      if (updateError) throw updateError;
 
-      // 2. Create retailer record
+      // 3. Format date properly (YYYY-MM-DD)
+      let formattedDob = null;
+      if (formData.ownerDob) {
+        // Convert DD/MM/YYYY to YYYY-MM-DD
+        const parts = formData.ownerDob.split('/');
+        if (parts.length === 3) {
+          formattedDob = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+      }
+
+      // 4. Create retailer record
       const { error: retailerError } = await supabase.from('retailers').insert({
-        user_id: authData.user.id,
+        user_id: user.id,
         business_name: formData.businessName,
         business_type: formData.businessType,
         gst_number: formData.gstNumber || null,
@@ -73,7 +87,7 @@ export default function RegisterScreen() {
         city: formData.city,
         state: formData.state,
         owner_name: formData.ownerName,
-        owner_dob: formData.ownerDob || null,
+        owner_dob: formattedDob,
         owner_phone: formData.ownerPhone,
         alternate_phone: formData.alternatePhone || null,
         status: 'pending',
@@ -81,10 +95,10 @@ export default function RegisterScreen() {
 
       if (retailerError) throw retailerError;
 
-      // 3. Refresh retailer data in context
+      // 5. Refresh retailer data in context
       await refreshRetailer();
 
-      // 4. Navigate to verification pending
+      // 6. Navigate to verification pending
       router.replace('/(auth)/verification-pending');
     } catch (err: unknown) {
       console.error('Registration error:', err);
@@ -109,7 +123,7 @@ export default function RegisterScreen() {
         );
       case 2:
         return (
-          <StepBusiness
+          <StepOTP
             formData={formData}
             updateFormData={updateFormData}
             onNext={nextStep}
@@ -120,7 +134,7 @@ export default function RegisterScreen() {
         );
       case 3:
         return (
-          <StepOwner
+          <StepBusiness
             formData={formData}
             updateFormData={updateFormData}
             onNext={nextStep}
@@ -130,6 +144,17 @@ export default function RegisterScreen() {
           />
         );
       case 4:
+        return (
+          <StepOwner
+            formData={formData}
+            updateFormData={updateFormData}
+            onNext={nextStep}
+            onBack={prevStep}
+            error={error}
+            setError={setError}
+          />
+        );
+      case 5:
         return (
           <StepPassword
             formData={formData}
@@ -157,7 +182,7 @@ export default function RegisterScreen() {
       >
         {/* Progress indicator */}
         <View style={styles.progressContainer}>
-          {[1, 2, 3, 4].map((step) => (
+          {[1, 2, 3, 4, 5].map((step) => (
             <View
               key={step}
               style={[
