@@ -1,18 +1,16 @@
-import { Stack } from "expo-router";
-import { AuthProvider } from "./lib/auth-context";
+import { Stack } from 'expo-router';
+import { AuthProvider } from './lib/auth-context';
 
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <Stack>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="phone-auth" options={{ headerShown: false }} />
-        <Stack.Screen name="registration" options={{ headerShown: true, title: 'Registration' }} />
-        <Stack.Screen name="(b2b)" options={{ headerShown: false}} /> 
-        <Stack.Screen name="categories" options={{ headerShown: true,title: 'Categories' }} /> 
-        <Stack.Screen name="products" options={{ headerShown: true,title: 'Products' }} /> 
-        <Stack.Screen name="auth" options={{ headerShown: false }} />
-        <Stack.Screen name="cart" options={{ presentation: 'modal',title: 'Cart' }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(retailer)" />
+        <Stack.Screen name="(ops)" />
+        <Stack.Screen name="(admin)" />
+        <Stack.Screen name="(sales)" />
       </Stack>
     </AuthProvider>
   );

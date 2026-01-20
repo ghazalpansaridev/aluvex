@@ -1,43 +1,46 @@
 import { Redirect } from 'expo-router';
 import { useAuth } from './lib/auth-context';
-import { View, ActivityIndicator, Text } from 'react-native';
-import { useEffect, useState } from 'react';
+import { LoadingSpinner } from '../components/ui';
 
 export default function Index() {
-  const { session, isPhoneVerified, loading } = useAuth();
-  const [isReady, setIsReady] = useState(false);
+  const { session, role, retailerStatus, isPhoneVerified, loading } = useAuth();
 
-  // Wait for auth context to finish loading and give it a moment to update
-  useEffect(() => {
-    if (!loading) {
-      // Small delay to ensure state is fully updated
-      const timer = setTimeout(() => {
-        setIsReady(true);
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [loading, isPhoneVerified, session]);
-
-  if (loading || !isReady) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={{ marginTop: 10, color: '#666' }}>Loading...</Text>
-      </View>
-    );
+  if (loading) {
+    return <LoadingSpinner fullScreen message="Loading..." />;
   }
 
-  // If no Supabase session, redirect to auth screen (login/signup)
+  // Not logged in -> Auth
   if (!session) {
-    return <Redirect href="/auth" />;
+    return <Redirect href="/(auth)/login" />;
   }
 
-  // If session exists but phone not verified, redirect to phone auth
-  if (session && !isPhoneVerified) {
-    return <Redirect href="/phone-auth" />;
+  // Logged in but phone not verified -> Phone auth
+  if (!isPhoneVerified) {
+    return <Redirect href="/(auth)/phone-verify" />;
   }
 
-  // Both session and phone verified, go to categories
-  return <Redirect href="/categories" />;
+  // Route based on role
+  switch (role) {
+    case 'admin':
+      return <Redirect href="/(admin)/dashboard" />;
+    case 'ops':
+      return <Redirect href="/(ops)/orders" />;
+    case 'sales':
+      return <Redirect href="/(sales)/catalog" />;
+    case 'retailer':
+      // Check retailer status
+      if (retailerStatus === 'pending') {
+        return <Redirect href="/(auth)/verification-pending" />;
+      }
+      if (retailerStatus === 'rejected') {
+        return <Redirect href="/(auth)/rejected" />;
+      }
+      if (!retailerStatus) {
+        // New signup, needs to complete registration
+        return <Redirect href="/(auth)/register" />;
+      }
+      return <Redirect href="/(retailer)/catalog" />;
+    default:
+      return <Redirect href="/(auth)/login" />;
+  }
 }
-

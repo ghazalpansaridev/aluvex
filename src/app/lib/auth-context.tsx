@@ -1,16 +1,21 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
-import { Session, User } from '@supabase/supabase-js';
+import { Session, User as SupabaseUser } from '@supabase/supabase-js';
+import { UserRole, RetailerStatus, Retailer } from '../../types';
 
 interface AuthContextType {
   session: Session | null;
-  user: User | null;
+  user: SupabaseUser | null;
+  role: UserRole | null;
+  retailer: Retailer | null;
+  retailerStatus: RetailerStatus | null;
   isPhoneVerified: boolean;
   loading: boolean;
   setPhoneVerified: (verified: boolean, saveToDB?: boolean) => Promise<void>;
-  savePhoneVerificationForSignup: (phoneNumber: string, aadhaar?: string, gstNumber?: string) => Promise<void>;
+  savePhoneVerificationForSignup: (phoneNumber: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshRetailer: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,242 +24,216 @@ const PHONE_VERIFICATION_KEY = '@phone_verification_status';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [role, setRole] = useState<UserRole | null>(null);
+  const [retailer, setRetailer] = useState<Retailer | null>(null);
+  const [retailerStatus, setRetailerStatus] = useState<RetailerStatus | null>(null);
   const [isPhoneVerified, setIsPhoneVerified] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const checkPhoneVerificationStatus = async () => {
+  // Fetch retailer data for retailer users
+  const fetchRetailerData = useCallback(async (userId: string) => {
     try {
-      // First check database (user metadata) - primary source
-      if (user) {
-        const userMetadata = user.user_metadata || {};
-        const dbVerified = userMetadata.phone_verified === true;
-        
-        if (dbVerified) {
-          setIsPhoneVerified(true);
-          // Sync AsyncStorage with DB
-          await AsyncStorage.setItem(PHONE_VERIFICATION_KEY, 'true');
-          console.log('Phone verification status from DB:', true);
-          return true;
-        }
+      const { data, error } = await supabase
+        .from('retailers')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+        console.error('Error fetching retailer:', error);
+        return null;
       }
-      
-      // Fallback to AsyncStorage (for signup users who haven't completed registration)
-      const status = await AsyncStorage.getItem(PHONE_VERIFICATION_KEY);
-      const verified = status === 'true';
-      setIsPhoneVerified(verified);
-      console.log('Phone verification status from AsyncStorage:', verified);
-      return verified;
-    } catch (error) {
-      console.error('Error checking phone verification status:', error);
-      setIsPhoneVerified(false);
-      return false;
+
+      return data as Retailer | null;
+    } catch (err) {
+      console.error('Error in fetchRetailerData:', err);
+      return null;
     }
-  };
+  }, []);
+
+  // Determine user role from metadata or retailer table
+  const determineRole = useCallback(async (supabaseUser: SupabaseUser): Promise<{
+    role: UserRole;
+    retailer: Retailer | null;
+    status: RetailerStatus | null;
+  }> => {
+    const metadata = supabaseUser.user_metadata || {};
+    
+    // Check if role is explicitly set in metadata (for admin, ops, sales)
+    if (metadata.role && ['admin', 'ops', 'sales'].includes(metadata.role)) {
+      return {
+        role: metadata.role as UserRole,
+        retailer: null,
+        status: null,
+      };
+    }
+
+    // Check if user is a retailer
+    const retailerData = await fetchRetailerData(supabaseUser.id);
+    
+    if (retailerData) {
+      return {
+        role: 'retailer',
+        retailer: retailerData,
+        status: retailerData.status as RetailerStatus,
+      };
+    }
+
+    // Default to retailer role for new signups (before registration complete)
+    return {
+      role: 'retailer',
+      retailer: null,
+      status: null,
+    };
+  }, [fetchRetailerData]);
+
+  // Initialize auth state
+  const initializeAuth = useCallback(async () => {
+    try {
+      setLoading(true);
+      
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      setSession(currentSession);
+      
+      if (currentSession?.user) {
+        setUser(currentSession.user);
+        
+        // Determine role and fetch retailer data
+        const { role: userRole, retailer: retailerData, status } = await determineRole(currentSession.user);
+        setRole(userRole);
+        setRetailer(retailerData);
+        setRetailerStatus(status);
+        
+        // Check phone verification
+        const phoneVerified = currentSession.user.user_metadata?.phone_verified === true;
+        setIsPhoneVerified(phoneVerified);
+        
+        // Sync with AsyncStorage
+        if (phoneVerified) {
+          await AsyncStorage.setItem(PHONE_VERIFICATION_KEY, 'true');
+        }
+      } else {
+        setUser(null);
+        setRole(null);
+        setRetailer(null);
+        setRetailerStatus(null);
+        setIsPhoneVerified(false);
+      }
+    } catch (error) {
+      console.error('Error initializing auth:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [determineRole]);
 
   useEffect(() => {
-    // Check phone verification status on mount and when session changes
-    const initializeAuth = async () => {
-      // Get initial session first
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      // Then check phone verification status (needs user to be set)
-      await checkPhoneVerificationStatus();
-      setLoading(false);
-    };
-
     initializeAuth();
 
-    // Listen for auth state changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      // Re-check phone verification when session changes
-      if (session) {
-        await checkPhoneVerificationStatus();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      setSession(newSession);
+      
+      if (newSession?.user) {
+        setUser(newSession.user);
+        const { role: userRole, retailer: retailerData, status } = await determineRole(newSession.user);
+        setRole(userRole);
+        setRetailer(retailerData);
+        setRetailerStatus(status);
+        
+        const phoneVerified = newSession.user.user_metadata?.phone_verified === true;
+        setIsPhoneVerified(phoneVerified);
       } else {
+        setUser(null);
+        setRole(null);
+        setRetailer(null);
+        setRetailerStatus(null);
         setIsPhoneVerified(false);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [initializeAuth, determineRole]);
 
-  // Re-check phone verification when user changes
-  useEffect(() => {
+  const refreshRetailer = async () => {
     if (user) {
-      checkPhoneVerificationStatus();
-    }
-  }, [user?.id]);
-
-  const setPhoneVerified = async (verified: boolean, saveToDB: boolean = true) => {
-    try {
-      console.log('Setting phone verified to:', verified, 'saveToDB:', saveToDB);
-      
-      // Always save to AsyncStorage
-      await AsyncStorage.setItem(PHONE_VERIFICATION_KEY, verified.toString());
-      setIsPhoneVerified(verified);
-      
-      // If saveToDB is true and user exists, also save to database (user metadata)
-      if (saveToDB && verified && user) {
-        try {
-          const currentMetadata = user.user_metadata || {};
-          const updatedMetadata = {
-            ...currentMetadata,
-            phone_verified: true,
-          };
-
-          const { error: updateError } = await supabase.auth.updateUser({
-            data: updatedMetadata,
-          });
-
-          if (updateError) {
-            console.error('Error updating user metadata:', updateError);
-            // Still continue - AsyncStorage is updated
-          } else {
-            console.log('Phone verification saved to user metadata');
-            // Refresh user to get updated metadata
-            const { data: { user: updatedUser } } = await supabase.auth.getUser();
-            if (updatedUser) {
-              setUser(updatedUser);
-            }
-          }
-        } catch (dbError) {
-          console.error('Error saving to database:', dbError);
-          // Continue - AsyncStorage is updated
-        }
-      }
-      
-      // Double-check to ensure it was saved
-      const status = await AsyncStorage.getItem(PHONE_VERIFICATION_KEY);
-      console.log('Phone verification status after setting:', status);
-      if (status === verified.toString()) {
-        setIsPhoneVerified(verified);
-      }
-    } catch (error) {
-      console.error('Error setting phone verification status:', error);
+      const retailerData = await fetchRetailerData(user.id);
+      setRetailer(retailerData);
+      setRetailerStatus(retailerData?.status as RetailerStatus || null);
     }
   };
 
-  const savePhoneVerificationForSignup = async (
-    phoneNumber: string,
-    aadhaar?: string,
-    gstNumber?: string
-  ) => {
+  const setPhoneVerified = async (verified: boolean, saveToDB = true) => {
     try {
-      if (!user) {
-        throw new Error('User not found');
-      }
-
-      console.log('Saving phone verification for signup user:', user.id);
+      await AsyncStorage.setItem(PHONE_VERIFICATION_KEY, verified.toString());
+      setIsPhoneVerified(verified);
       
-      const currentMetadata = user.user_metadata || {};
-      const updatedMetadata = {
-        ...currentMetadata,
-        phone_verified: true,
-        phone_number: phoneNumber,
-        ...(aadhaar && { aadhaar }),
-        ...(gstNumber && { gst_number: gstNumber }),
-      };
-
-      const { error: updateError } = await supabase.auth.updateUser({
-        data: updatedMetadata,
-      });
-
-      if (updateError) {
-        console.error('Error updating user metadata:', updateError);
-        throw updateError;
-      }
-
-      console.log('Phone verification and registration data saved to user metadata');
-      
-      // Update local state
-      setIsPhoneVerified(true);
-      await AsyncStorage.setItem(PHONE_VERIFICATION_KEY, 'true');
-      
-      // Refresh user to get updated metadata
-      const { data: { user: updatedUser } } = await supabase.auth.getUser();
-      if (updatedUser) {
-        setUser(updatedUser);
+      if (saveToDB && verified && user) {
+        const { error } = await supabase.auth.updateUser({
+          data: { ...user.user_metadata, phone_verified: true },
+        });
+        
+        if (!error) {
+          const { data: { user: updatedUser } } = await supabase.auth.getUser();
+          if (updatedUser) setUser(updatedUser);
+        }
       }
     } catch (error) {
-      console.error('Error saving phone verification for signup:', error);
-      throw error;
+      console.error('Error setting phone verification:', error);
     }
+  };
+
+  const savePhoneVerificationForSignup = async (phoneNumber: string) => {
+    if (!user) throw new Error('User not found');
+    
+    const { error } = await supabase.auth.updateUser({
+      data: {
+        ...user.user_metadata,
+        phone_verified: true,
+        phone_number: phoneNumber,
+      },
+    });
+    
+    if (error) throw error;
+    
+    setIsPhoneVerified(true);
+    await AsyncStorage.setItem(PHONE_VERIFICATION_KEY, 'true');
+    
+    const { data: { user: updatedUser } } = await supabase.auth.getUser();
+    if (updatedUser) setUser(updatedUser);
   };
 
   const logout = async () => {
     try {
-      console.log('Logging out...');
-      
-      // Clear local state FIRST - this is critical for navigation to work
       setSession(null);
       setUser(null);
+      setRole(null);
+      setRetailer(null);
+      setRetailerStatus(null);
       setIsPhoneVerified(false);
-      console.log('Local state cleared immediately');
       
-      // Clear phone verification status
       await AsyncStorage.removeItem(PHONE_VERIFICATION_KEY);
-      console.log('Phone verification status cleared');
-      
-      // Sign out from Supabase - this triggers onAuthStateChange
-      const { error: signOutError } = await supabase.auth.signOut();
-      if (signOutError) {
-        console.error('Supabase signOut error:', signOutError);
-      } else {
-        console.log('Supabase session cleared');
-      }
-      
-      // Explicitly clear Supabase auth storage keys
-      try {
-        const keys = await AsyncStorage.getAllKeys();
-        const supabaseKeys = keys.filter(key => 
-          key.includes('supabase') || 
-          key.includes('sb-') ||
-          (key.includes('auth') && !key.includes('phone'))
-        );
-        for (const key of supabaseKeys) {
-          try {
-            await AsyncStorage.removeItem(key);
-            console.log('Cleared storage key:', key);
-          } catch (err) {
-            console.log('Error clearing key:', key, err);
-          }
-        }
-      } catch (e) {
-        console.log('Error getting keys:', e);
-      }
-      
-      console.log('Logout completed');
+      await supabase.auth.signOut();
     } catch (error) {
       console.error('Error during logout:', error);
-      // Ensure state is cleared even on error
-      setSession(null);
-      setUser(null);
-      setIsPhoneVerified(false);
-      try {
-        await AsyncStorage.removeItem(PHONE_VERIFICATION_KEY);
-      } catch (e) {
-        console.error('Error clearing phone verification:', e);
-      }
     }
   };
 
-  // Don't block rendering while loading - let children handle it
   return (
-    <AuthContext.Provider value={{ 
-      session, 
-      user, 
-      isPhoneVerified, 
-      loading, 
-      setPhoneVerified, 
-      savePhoneVerificationForSignup,
-      logout 
-    }}>
+    <AuthContext.Provider
+      value={{
+        session,
+        user,
+        role,
+        retailer,
+        retailerStatus,
+        isPhoneVerified,
+        loading,
+        setPhoneVerified,
+        savePhoneVerificationForSignup,
+        logout,
+        refreshRetailer,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -267,4 +246,3 @@ export function useAuth() {
   }
   return context;
 }
-
