@@ -12,7 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from './lib/auth-context';
+import { useAuth } from '../lib/auth-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const PHONE_VERIFICATION_KEY = '@phone_verification_status';

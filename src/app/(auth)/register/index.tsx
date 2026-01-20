@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../lib/auth-context';
+import { supabase } from '../../../lib/supabase';
+import { useAuth } from '../../../lib/auth-context';
 
 import StepEmail from './step-email';
 import StepBusiness from './step-business';

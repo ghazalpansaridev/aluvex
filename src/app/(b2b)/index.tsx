@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../lib/auth-context';
+import { useAuth } from '../../lib/auth-context';
 
 export default function Index() {
   const router = useRouter();

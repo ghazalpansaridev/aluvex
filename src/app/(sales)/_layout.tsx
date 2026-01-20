@@ -1,5 +1,5 @@
 import { Tabs, Redirect } from 'expo-router';
-import { useAuth } from '../lib/auth-context';
+import { useAuth } from '../../lib/auth-context';
 import { LoadingSpinner } from '../../components/ui';
 
 export default function SalesLayout() {

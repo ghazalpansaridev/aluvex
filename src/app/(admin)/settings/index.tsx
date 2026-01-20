@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../../lib/auth-context';
+import { useAuth } from '../../../lib/auth-context';
 import { Card, Button } from '../../../components/ui';
 
 export default function AdminSettingsScreen() {

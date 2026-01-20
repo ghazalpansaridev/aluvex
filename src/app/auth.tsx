@@ -13,9 +13,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from './lib/supabase';
-import { useAuth } from './lib/auth-context';
-import { checkEmailExists } from './lib/api';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../lib/auth-context';
+import { checkEmailExists } from '../lib/api';
 
 type AuthMode = 'signup' | 'login';
 

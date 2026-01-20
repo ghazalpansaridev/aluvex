@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useRouter, Redirect } from 'expo-router';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../lib/auth-context';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../lib/auth-context';
 
 interface Subcategory {
   id: string;

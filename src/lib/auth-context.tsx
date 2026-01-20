@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
-import { UserRole, RetailerStatus, Retailer } from '../../types';
+import { UserRole, RetailerStatus, Retailer } from '../types';
 
 interface AuthContextType {
   session: Session | null;

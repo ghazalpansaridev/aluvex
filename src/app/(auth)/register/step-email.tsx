@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { z } from 'zod';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../../lib/supabase';
 import { Button, Input } from '../../../components/ui';
 import { RegistrationFormData } from '../../../types';
 

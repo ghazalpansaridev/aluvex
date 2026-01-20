@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '../../components/ui';
-import { useAuth } from '../lib/auth-context';
+import { useAuth } from '../../lib/auth-context';
 
 export default function VerificationPendingScreen() {
   const router = useRouter();

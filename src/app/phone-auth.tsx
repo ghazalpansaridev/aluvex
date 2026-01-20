@@ -13,8 +13,8 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { sendOTP, verifyOTP } from './lib/api';
-import { useAuth } from './lib/auth-context';
+import { sendOTP, verifyOTP } from '../lib/api';
+import { useAuth } from '../lib/auth-context';
 
 export default function PhoneAuth() {
   const router = useRouter();

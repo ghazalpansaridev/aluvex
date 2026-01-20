@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Tabs, useRouter, Redirect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useAuth } from "../lib/auth-context";
+import { useAuth } from "../../lib/auth-context";
 import { View, ActivityIndicator } from "react-native";
 
 const TabsLayout = () => {

@@ -8,7 +8,7 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import { Button, Input } from '../../components/ui';
 
 export default function ForgotPasswordScreen() {

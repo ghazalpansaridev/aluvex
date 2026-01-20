@@ -8,7 +8,7 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../lib/auth-context';
+import { useAuth } from '../../lib/auth-context';
 import { Button, Input } from '../../components/ui';
 
 export default function PhoneVerifyScreen() {

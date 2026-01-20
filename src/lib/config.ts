@@ -26,4 +26,3 @@ function getConfig(): Config {
 }
 
 export const config = getConfig();
-

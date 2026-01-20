@@ -1,6 +1,6 @@
 import { Tabs, Redirect } from 'expo-router';
 import { Text } from 'react-native';
-import { useAuth } from '../lib/auth-context';
+import { useAuth } from '../../lib/auth-context';
 import { LoadingSpinner } from '../../components/ui';
 
 export default function RetailerLayout() {
