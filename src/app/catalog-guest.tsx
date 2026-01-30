@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../lib/auth-context';
+import { supabase } from '../lib/supabase';
 
 interface Subcategory {
   id: string;
@@ -20,20 +19,18 @@ interface Category {
   subcategories?: Subcategory[];
 }
 
-export default function CategoriesPage() {
+export default function GuestCatalogPage() {
   const router = useRouter();
-  const { loading: authLoading } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Define fetchCategories before using it in useEffect
   const fetchCategories = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // Fetch categories with their subcategories
+      // Fetch categories with their subcategories (public access)
       const { data, error: fetchError } = await supabase
         .from('categories')
         .select(`
@@ -60,34 +57,24 @@ export default function CategoriesPage() {
     }
   };
 
-  // All hooks must be called before any early returns
   useEffect(() => {
-    // Fetch categories for all users (authenticated or not)
     fetchCategories();
   }, []);
 
-
-  // Show loading during auth check
-  if (authLoading) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
-  }
-
-  // No need to redirect - catalog is public!
-
   const handleCategoryPress = (categoryId: string) => {
+    // Navigate to category detail - this will also be public
     router.push(`/categories/${categoryId}`);
+  };
+
+  const handleLoginPress = () => {
+    router.push('/(auth)/login');
   };
 
   if (loading) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Loading categories...</Text>
+        <Text style={styles.loadingText}>Loading catalog...</Text>
       </View>
     );
   }
@@ -105,6 +92,17 @@ export default function CategoriesPage() {
 
   return (
     <View style={styles.container}>
+      {/* Guest Banner */}
+      <View style={styles.guestBanner}>
+        <Text style={styles.guestBannerTitle}>👋 Welcome, Guest!</Text>
+        <Text style={styles.guestBannerText}>
+          Browse our catalog. Login to place orders and access full features.
+        </Text>
+        <TouchableOpacity style={styles.loginButton} onPress={handleLoginPress}>
+          <Text style={styles.loginButtonText}>Login / Register</Text>
+        </TouchableOpacity>
+      </View>
+
       <FlatList
         data={categories}
         keyExtractor={(item) => item.id}
@@ -119,7 +117,6 @@ export default function CategoriesPage() {
               {item.description && (
                 <Text style={styles.categoryDescription}>{item.description}</Text>
               )}
-              {/* Show subcategory count if available */}
               {item.subcategories && item.subcategories.length > 0 && (
                 <Text style={styles.subcategoryCount}>
                   {item.subcategories.length} subcategor{item.subcategories.length === 1 ? 'y' : 'ies'}
@@ -143,6 +140,47 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  guestBanner: {
+    backgroundColor: '#4A90E2',
+    padding: 20,
+    alignItems: 'center',
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  guestBannerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 8,
+  },
+  guestBannerText: {
+    fontSize: 14,
+    color: '#ffffff',
+    textAlign: 'center',
+    marginBottom: 16,
+    opacity: 0.95,
+  },
+  loginButton: {
+    backgroundColor: '#ffffff',
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  loginButtonText: {
+    color: '#4A90E2',
+    fontSize: 16,
+    fontWeight: '600',
   },
   listContainer: {
     padding: 16,

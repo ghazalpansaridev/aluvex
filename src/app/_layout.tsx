@@ -3,7 +3,9 @@ import { Stack } from 'expo-router';
 import { Platform } from 'react-native';
 import * as Linking from 'expo-linking';
 import { AuthProvider } from '../lib/auth-context';
+import { DrawerProvider } from '../lib/drawer-context';
 import { supabase } from '../lib/supabase';
+import { GlobalDrawer } from '../components/ui';
 
 export default function RootLayout() {
   useEffect(() => {
@@ -47,14 +49,18 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(retailer)" />
-        <Stack.Screen name="(ops)" />
-        <Stack.Screen name="(admin)" />
-        <Stack.Screen name="(sales)" />
-      </Stack>
+      <DrawerProvider>
+        <GlobalDrawer>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(retailer)" />
+            <Stack.Screen name="(ops)" />
+            <Stack.Screen name="(admin)" />
+            <Stack.Screen name="(sales)" />
+          </Stack>
+        </GlobalDrawer>
+      </DrawerProvider>
     </AuthProvider>
   );
 }

@@ -1,0 +1,43 @@
+import React from 'react';
+import { View, StyleSheet, Platform } from 'react-native';
+import { HamburgerMenu, HamburgerIcon } from './HamburgerMenu';
+import { DrawerContent } from './DrawerContent';
+import { useDrawer } from '../../lib/drawer-context';
+
+export const GlobalDrawer: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const { isDrawerOpen, openDrawer, closeDrawer } = useDrawer();
+
+  return (
+    <View style={styles.container}>
+      {/* Hamburger Icon - positioned absolutely in top left */}
+      <View style={styles.hamburgerContainer}>
+        <HamburgerIcon onPress={openDrawer} color="#333" />
+      </View>
+
+      {/* Main content */}
+      {children}
+
+      {/* Slide-out drawer */}
+      <HamburgerMenu isOpen={isDrawerOpen} onClose={closeDrawer}>
+        <DrawerContent onClose={closeDrawer} />
+      </HamburgerMenu>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  hamburgerContainer: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 20,
+    left: 0,
+    zIndex: 1000,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 20,
+    marginLeft: 8,
+  },
+});

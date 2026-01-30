@@ -26,9 +26,9 @@ export default function Index() {
     }
   }
 
-  // Not logged in -> Auth
+  // Not logged in -> Show guest catalog (public access)
   if (!session) {
-    return <Redirect href="/(auth)/login" />;
+    return <Redirect href="/catalog-guest" />;
   }
 
   // Phone verification required for all users
@@ -36,13 +36,16 @@ export default function Index() {
     return <Redirect href="/(auth)/phone-verify" />;
   }
 
-  // Route based on role
+  // Route all authenticated users to catalog as home page
   switch (role) {
     case 'admin':
-      return <Redirect href="/(admin)/dashboard" />;
-    case 'ops':
-      return <Redirect href="/(ops)/orders" />;
+      // Admin users go to standard catalog
+      return <Redirect href="/categories" />;
+    case 'operations':
+      // Operations users go to standard catalog
+      return <Redirect href="/categories" />;
     case 'sales':
+      // Sales users go to sales catalog
       return <Redirect href="/(sales)/catalog" />;
     case 'retailer':
       // Check retailer status
@@ -56,6 +59,7 @@ export default function Index() {
         // New signup, needs to complete registration
         return <Redirect href="/(auth)/register" />;
       }
+      // Retailer users go to retailer catalog
       return <Redirect href="/(retailer)/catalog" />;
     default:
       return <Redirect href="/(auth)/login" />;

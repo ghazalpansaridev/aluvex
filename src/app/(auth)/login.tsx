@@ -8,35 +8,23 @@ import {
   Platform,
   TouchableOpacity,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Redirect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../lib/auth-context';
 import { Button, Input } from '../../components/ui';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { session, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Clear any stale recovery sessions on mount
-  useEffect(() => {
-    const clearStaleSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        // If there's a session but user is on login page, it might be stale/recovery session
-        if (session) {
-          console.log('Found existing session on login page, clearing it...');
-          await supabase.auth.signOut();
-        }
-      } catch (err) {
-        console.log('Error clearing stale session:', err);
-      }
-    };
-
-    clearStaleSession();
-  }, []);
+  // Redirect already authenticated users
+  if (!authLoading && session) {
+    return <Redirect href="/" />;
+  }
 
   const handleLogin = async () => {
     if (!email || !password) {

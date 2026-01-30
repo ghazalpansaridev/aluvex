@@ -9,7 +9,7 @@ export default function OpsLayout() {
     return <LoadingSpinner fullScreen />;
   }
 
-  if (role !== 'ops' && role !== 'admin') {
+  if (role !== 'operations' && role !== 'admin') {
     return <Redirect href="/" />;
   }
 

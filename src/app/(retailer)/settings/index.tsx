@@ -1,17 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useAuth } from '../../../lib/auth-context';
-import { Card, Button } from '../../../components/ui';
+import { Card } from '../../../components/ui';
 
 export default function SettingsScreen() {
-  const router = useRouter();
-  const { user, retailer, logout } = useAuth();
-
-  const handleLogout = async () => {
-    await logout();
-    router.replace('/');
-  };
+  const { user, retailer } = useAuth();
 
   return (
     <View style={styles.container}>
@@ -32,14 +25,6 @@ export default function SettingsScreen() {
           <Text style={styles.menuText}>Support</Text>
         </TouchableOpacity>
       </View>
-
-      <Button
-        title="Logout"
-        onPress={handleLogout}
-        variant="destructive"
-        fullWidth
-        style={styles.logoutButton}
-      />
     </View>
   );
 }
@@ -81,8 +66,5 @@ const styles = StyleSheet.create({
   menuText: {
     fontSize: 16,
     color: '#333',
-  },
-  logoutButton: {
-    marginTop: 'auto',
   },
 });

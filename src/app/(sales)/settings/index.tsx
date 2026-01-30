@@ -1,17 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useAuth } from '../../../lib/auth-context';
-import { Card, Button } from '../../../components/ui';
+import { Card } from '../../../components/ui';
 
 export default function SalesSettingsScreen() {
-  const router = useRouter();
-  const { user, logout } = useAuth();
-
-  const handleLogout = async () => {
-    await logout();
-    router.replace('/');
-  };
+  const { user } = useAuth();
 
   return (
     <View style={styles.container}>
@@ -19,14 +12,6 @@ export default function SalesSettingsScreen() {
         <Text style={styles.role}>Sales Representative</Text>
         <Text style={styles.email}>{user?.email}</Text>
       </Card>
-
-      <Button
-        title="Logout"
-        onPress={handleLogout}
-        variant="destructive"
-        fullWidth
-        style={styles.logoutButton}
-      />
     </View>
   );
 }
@@ -49,8 +34,5 @@ const styles = StyleSheet.create({
   email: {
     fontSize: 14,
     color: '#666',
-  },
-  logoutButton: {
-    marginTop: 'auto',
   },
 });
