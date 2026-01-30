@@ -127,23 +127,24 @@ export default function PhoneVerifyScreen() {
       const data = await response.json();
       console.log('Verify API response:', data);
 
-      if (!data?.success || !data?.verified) {
+      // Check if OTP verification failed
+      if (!data?.success && !data?.verified) {
         throw new Error(data?.error || 'Invalid OTP');
       }
 
-      console.log('OTP verified successfully');
-      
-      // The Edge Function already updated user metadata with phone_verified: true
-      // Force reload to pick up the updated user data
-      console.log('Phone verification complete! Reloading page...');
-      
-      // For web, use window.location to force a full page reload
-      if (typeof window !== 'undefined') {
-        window.location.href = '/';
-      } else {
-        // For mobile, use router
-        router.replace('/');
+      // Check if OTP was verified but metadata update failed
+      if (data?.verified && !data?.success) {
+        throw new Error(data?.error || 'Phone verified but profile update failed');
       }
+
+      console.log('OTP verified and profile updated successfully');
+      
+      // Refresh session to get updated user metadata from Edge Function
+      console.log('Refreshing session to load updated user data...');
+      await supabase.auth.refreshSession();
+      
+      console.log('Phone verification complete! Navigating to home...');
+      router.replace('/');
     } catch (err: unknown) {
       console.error('Verify OTP error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Invalid OTP';
