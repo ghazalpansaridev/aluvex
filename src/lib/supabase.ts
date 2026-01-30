@@ -1,45 +1,105 @@
-import 'react-native-url-polyfill/auto'
 import { createClient } from '@supabase/supabase-js'
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import { config } from './config'
 
 const supabaseUrl = config.supabaseUrl
 const supabaseAnonKey = config.supabaseAnonKey
 
-// Simple storage adapter using AsyncStorage directly
-// This avoids SecureStore compatibility issues
-const storageAdapter = {
-  getItem: async (key: string): Promise<string | null> => {
-    try {
-      return await AsyncStorage.getItem(key)
-    } catch (error) {
-      console.error('Error getting item from storage:', error)
-      return null
-    }
-  },
-  setItem: async (key: string, value: string): Promise<void> => {
-    try {
-      await AsyncStorage.setItem(key, value)
-    } catch (error) {
-      console.error('Error setting item in storage:', error)
-      throw error
-    }
-  },
-  removeItem: async (key: string): Promise<void> => {
-    try {
-      await AsyncStorage.removeItem(key)
-    } catch (error) {
-      console.error('Error removing item from storage:', error)
-      throw error
-    }
-  },
-}
+// Debug: Log credentials (remove in production)
+console.log('Supabase Config:', {
+  url: supabaseUrl,
+  keyLength: supabaseAnonKey?.length,
+  keyStart: supabaseAnonKey?.substring(0, 20) + '...',
+});
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    storage: storageAdapter,
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: false,
-  },
-})
+// Create Supabase client for auth operations only
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+// Direct database operations helper (bypasses storage issues)
+export const supabaseDb = {
+  from: (table: string) => ({
+    select: async (columns = '*') => {
+      try {
+        const response = await fetch(`${supabaseUrl}/rest/v1/${table}?select=${columns}`, {
+          headers: {
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+          }
+        });
+        const data = await response.json();
+        return { data: response.ok ? data : null, error: response.ok ? null : data };
+      } catch (error) {
+        return { data: null, error };
+      }
+    },
+    insert: async (values: any) => {
+      try {
+        const response = await fetch(`${supabaseUrl}/rest/v1/${table}`, {
+          method: 'POST',
+          headers: {
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify(values)
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          return { data: null, error };
+        }
+        
+        return { data: null, error: null };
+      } catch (error) {
+        return { data: null, error };
+      }
+    },
+    update: async (values: any) => ({
+      eq: async (column: string, value: any) => {
+        try {
+          const response = await fetch(`${supabaseUrl}/rest/v1/${table}?${column}=eq.${value}`, {
+            method: 'PATCH',
+            headers: {
+              'apikey': supabaseAnonKey,
+              'Authorization': `Bearer ${supabaseAnonKey}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify(values)
+          });
+          
+          if (!response.ok) {
+            const error = await response.json();
+            return { data: null, error };
+          }
+          
+          return { data: null, error: null };
+        } catch (error) {
+          return { data: null, error };
+        }
+      }
+    }),
+    delete: () => ({
+      eq: async (column: string, value: any) => {
+        try {
+          const response = await fetch(`${supabaseUrl}/rest/v1/${table}?${column}=eq.${value}`, {
+            method: 'DELETE',
+            headers: {
+              'apikey': supabaseAnonKey,
+              'Authorization': `Bearer ${supabaseAnonKey}`,
+            }
+          });
+          
+          if (!response.ok) {
+            const error = await response.json();
+            return { data: null, error };
+          }
+          
+          return { data: null, error: null };
+        } catch (error) {
+          return { data: null, error };
+        }
+      }
+    }),
+  })
+}

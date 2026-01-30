@@ -13,7 +13,14 @@ export default function AuthLayout() {
         }} 
       />
       <Stack.Screen name="phone-verify" options={{ title: 'Verify Phone' }} />
-      <Stack.Screen name="forgot-password" options={{ title: 'Reset Password' }} />
+      <Stack.Screen name="forgot-password" options={{ title: 'Forgot Password' }} />
+      <Stack.Screen 
+        name="reset-password" 
+        options={{ 
+          title: 'Reset Password',
+          headerShown: true,
+        }} 
+      />
       <Stack.Screen 
         name="verification-pending" 
         options={{ 

@@ -9,11 +9,13 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../lib/auth-context';
+import { supabase } from '../../lib/supabase';
+import { config } from '../../lib/config';
 import { Button, Input } from '../../components/ui';
 
 export default function PhoneVerifyScreen() {
   const router = useRouter();
-  const { savePhoneVerificationForSignup } = useAuth();
+  const { user } = useAuth();
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
@@ -30,12 +32,54 @@ export default function PhoneVerifyScreen() {
     setError(null);
 
     try {
-      // TODO: Implement actual OTP sending via Supabase Edge Function
-      // For now, just move to OTP step
+      console.log('Sending OTP to phone:', phone);
+      
+      // Direct API call to bypass Supabase client issues
+      console.log('Using credentials:', {
+        url: config.supabaseUrl,
+        keyLength: config.supabaseAnonKey.length,
+        keyStart: config.supabaseAnonKey.substring(0, 30) + '...'
+      });
+      
+      const response = await fetch(
+        `${config.supabaseUrl}/functions/v1/send-otp`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${config.supabaseAnonKey}`,
+            'apikey': config.supabaseAnonKey,
+          },
+          body: JSON.stringify({ phone })
+        }
+      );
+
+      console.log('Response status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API error response:', errorText);
+        throw new Error(`Failed to send OTP: ${response.status} ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('API response data:', data);
+
+      if (!data?.success) {
+        const errorMsg = data?.error || 'Failed to send OTP';
+        console.error('OTP send failed:', errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      console.log('OTP sent successfully');
       setStep('otp');
     } catch (err: unknown) {
+      console.error('Send OTP error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to send OTP';
       setError(errorMessage);
+      
+      // Show detailed error in alert for debugging
+      alert(`OTP Send Error: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -51,13 +95,60 @@ export default function PhoneVerifyScreen() {
     setError(null);
 
     try {
-      // TODO: Implement actual OTP verification via Supabase Edge Function
-      // For now, just save phone verification
-      await savePhoneVerificationForSignup(phone);
-      router.replace('/');
+      console.log('Verifying OTP for phone:', phone);
+      
+      // Direct API call to verify-otp
+      const response = await fetch(
+        `${config.supabaseUrl}/functions/v1/verify-otp`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${config.supabaseAnonKey}`,
+            'apikey': config.supabaseAnonKey,
+          },
+          body: JSON.stringify({ 
+            phone, 
+            code: otp,
+            user_id: user?.id,
+            is_signup: false
+          })
+        }
+      );
+
+      console.log('Verify response status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Verify API error:', errorText);
+        throw new Error(`Verification failed: ${response.status} ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('Verify API response:', data);
+
+      if (!data?.success || !data?.verified) {
+        throw new Error(data?.error || 'Invalid OTP');
+      }
+
+      console.log('OTP verified successfully');
+      
+      // The Edge Function already updated user metadata with phone_verified: true
+      // Force reload to pick up the updated user data
+      console.log('Phone verification complete! Reloading page...');
+      
+      // For web, use window.location to force a full page reload
+      if (typeof window !== 'undefined') {
+        window.location.href = '/';
+      } else {
+        // For mobile, use router
+        router.replace('/');
+      }
     } catch (err: unknown) {
+      console.error('Verify OTP error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Invalid OTP';
       setError(errorMessage);
+      alert(`Verification Error: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -73,7 +164,7 @@ export default function PhoneVerifyScreen() {
           <Text style={styles.title}>Verify Phone</Text>
           <Text style={styles.subtitle}>
             {step === 'phone'
-              ? 'Enter your phone number to receive OTP'
+              ? 'Phone verification is required for security. Enter your phone number to receive OTP.'
               : `Enter the OTP sent to +91 ${phone}`}
           </Text>
         </View>

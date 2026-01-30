@@ -93,10 +93,24 @@ export default function StepOTP({
       }
 
       console.log('OTP verified successfully, user authenticated');
+      console.log('Session:', { 
+        user_id: data.session.user.id, 
+        email: data.session.user.email,
+        access_token: data.session.access_token ? 'present' : 'missing'
+      });
+
+      // Save user ID and access token to formData for later use
+      updateFormData({ 
+        userId: data.session.user.id,
+        accessToken: data.session.access_token 
+      });
+      console.log('User ID and access token saved to formData:', data.session.user.id);
+
       setSuccessMessage('Email verified successfully!');
       
-      // Small delay to show success message
+      // Small delay to show success message, then continue
       setTimeout(() => {
+        console.log('Moving to next step');
         onNext();
       }, 500);
     } catch (err) {

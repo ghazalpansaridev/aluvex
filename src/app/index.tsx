@@ -1,4 +1,5 @@
 import { Redirect } from 'expo-router';
+import { Platform } from 'react-native';
 import { useAuth } from '../lib/auth-context';
 import { LoadingSpinner } from '../components/ui';
 
@@ -9,12 +10,28 @@ export default function Index() {
     return <LoadingSpinner fullScreen message="Loading..." />;
   }
 
+  // Check for password reset flow (tokens in URL)
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const fullUrl = window.location.href;
+    const hash = window.location.hash;
+    
+    console.log('[Index] Current URL:', fullUrl);
+    console.log('[Index] URL hash:', hash.substring(0, 80) + '...');
+    
+    // Check if this is a password reset/recovery flow
+    // Either the URL contains type=recovery or we came from Supabase verify endpoint
+    if (fullUrl.includes('type=recovery') || hash.includes('type=recovery')) {
+      console.log('[Index] Password reset flow detected - redirecting to reset-password');
+      return <Redirect href="/(auth)/reset-password" />;
+    }
+  }
+
   // Not logged in -> Auth
   if (!session) {
     return <Redirect href="/(auth)/login" />;
   }
 
-  // Logged in but phone not verified -> Phone auth
+  // Phone verification required for all users
   if (!isPhoneVerified) {
     return <Redirect href="/(auth)/phone-verify" />;
   }

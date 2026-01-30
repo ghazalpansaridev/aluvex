@@ -37,7 +37,28 @@ export default function StepPassword({
   const [acceptedTerms, setAcceptedTerms] = useState(formData.acceptedTerms || false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  // Update formData in real-time as user types
+  const handlePasswordChange = (value: string) => {
+    setPassword(value);
+    updateFormData({ password: value });
+  };
+
+  const handleConfirmPasswordChange = (value: string) => {
+    setConfirmPassword(value);
+    updateFormData({ confirmPassword: value });
+  };
+
+  const handleTermsChange = (value: boolean) => {
+    setAcceptedTerms(value);
+    updateFormData({ acceptedTerms: value });
+  };
+
   const handleSubmit = () => {
+    console.log('StepPassword handleSubmit called');
+    console.log('Password length:', password.length);
+    console.log('Confirm password length:', confirmPassword.length);
+    console.log('Accepted terms:', acceptedTerms);
+    
     setFieldErrors({});
     setError(null);
 
@@ -49,6 +70,7 @@ export default function StepPassword({
 
     const result = passwordSchema.safeParse(data);
     if (!result.success) {
+      console.log('Validation failed:', result.error.errors);
       const errors: Record<string, string> = {};
       result.error.errors.forEach((err) => {
         if (err.path[0]) {
@@ -59,7 +81,8 @@ export default function StepPassword({
       return;
     }
 
-    updateFormData({ password, confirmPassword, acceptedTerms });
+    console.log('Validation passed, calling onSubmit (formData already updated in real-time)');
+    // FormData is already updated in real-time, just call onSubmit
     onSubmit();
   };
 
@@ -78,7 +101,7 @@ export default function StepPassword({
         label="Password"
         placeholder="Enter password"
         value={password}
-        onChangeText={setPassword}
+        onChangeText={handlePasswordChange}
         secureTextEntry
         error={fieldErrors.password}
         hint="Minimum 8 characters"
@@ -89,7 +112,7 @@ export default function StepPassword({
         label="Confirm Password"
         placeholder="Re-enter password"
         value={confirmPassword}
-        onChangeText={setConfirmPassword}
+        onChangeText={handleConfirmPasswordChange}
         secureTextEntry
         error={fieldErrors.confirmPassword}
         required
@@ -97,7 +120,7 @@ export default function StepPassword({
 
       <TouchableOpacity
         style={styles.termsContainer}
-        onPress={() => setAcceptedTerms(!acceptedTerms)}
+        onPress={() => handleTermsChange(!acceptedTerms)}
         activeOpacity={0.7}
       >
         <View style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}>

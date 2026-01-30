@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
+import { config } from '../../lib/config';
 import { Button, Input } from '../../components/ui';
 
 export default function ForgotPasswordScreen() {
@@ -28,12 +29,42 @@ export default function ForgotPasswordScreen() {
     setError(null);
 
     try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email);
+      console.log('Sending password reset email to:', email);
+      
+      // Get the correct redirect URL dynamically
+      const redirectTo = typeof window !== 'undefined' 
+        ? `${window.location.origin}/reset-password`
+        : 'http://localhost:8081/reset-password';
+      
+      console.log('Redirect URL:', redirectTo);
+      
+      // Use direct API call to avoid client hanging
+      const response = await fetch(`${config.supabaseUrl}/auth/v1/recover`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': config.supabaseAnonKey,
+        },
+        body: JSON.stringify({
+          email,
+          options: {
+            redirectTo
+          }
+        })
+      });
 
-      if (resetError) throw resetError;
+      console.log('Reset email response:', response.status, response.statusText);
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Reset email error:', errorData);
+        throw new Error(errorData.message || `Failed to send reset email: ${response.status}`);
+      }
+
+      console.log('Password reset email sent successfully');
       setSuccess(true);
     } catch (err: unknown) {
+      console.error('Password reset error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to send reset email';
       setError(errorMessage);
     } finally {
