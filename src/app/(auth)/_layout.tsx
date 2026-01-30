@@ -35,6 +35,14 @@ export default function AuthLayout() {
           gestureEnabled: false,
         }} 
       />
+      <Stack.Screen 
+        name="set-password" 
+        options={{ 
+          title: 'Set Password',
+          headerShown: true,
+          gestureEnabled: false,
+        }} 
+      />
     </Stack>
   );
 }

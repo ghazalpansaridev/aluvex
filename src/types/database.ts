@@ -1,11 +1,12 @@
 // Database types matching Supabase schema
 
-export type UserRole = 'admin' | 'ops' | 'sales' | 'retailer';
+export type UserRole = 'admin' | 'operations' | 'sales' | 'retailer';
 export type RetailerStatus = 'pending' | 'approved' | 'rejected';
 export type BusinessType = 'Trader' | 'Fabricator' | 'Builder' | 'Architect' | 'Other';
 export type OrderStatus = 'placed' | 'partially_shipped' | 'shipped' | 'cancelled';
 export type ItemStatus = 'active' | 'inactive' | 'draft';
 export type CategoryStatus = 'active' | 'inactive';
+export type StaffUserStatus = 'pending_password' | 'active' | 'inactive';
 
 export interface User {
   id: string;
@@ -184,6 +185,26 @@ export interface Favorite {
   item_id: string;
   created_at: string;
   item?: Item;
+}
+
+// Staff User types
+export interface StaffUser {
+  id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  role: 'admin' | 'ops' | 'sales';
+  region?: string;
+  pincode?: string;
+  address?: string;
+  status: StaffUserStatus;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+  // Joined from auth.users
+  email?: string;
+  last_login?: string;
 }
 
 // Auth context types

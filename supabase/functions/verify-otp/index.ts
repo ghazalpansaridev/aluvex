@@ -21,7 +21,7 @@ serve(async (req) => {
       throw new Error('Supabase credentials not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY as environment variables.');
     }
     // Parse request body
-    const { phone, code, user_id, is_signup } = await req.json();
+    const { phone, code } = await req.json();
 
     // Validate inputs
     if (!phone || !/^\d{10}$/.test(phone)) {
@@ -120,103 +120,6 @@ serve(async (req) => {
       .from('otp_verifications')
       .delete()
       .eq('phone_number', phone);
-
-    // If this is a login user (not signup), save phone verification to user metadata
-    if (user_id && !is_signup) {
-      try {
-        console.log('Updating user metadata for user:', user_id);
-        
-        // First, get current user to preserve existing metadata
-        const getUserResponse = await fetch(
-          `${SUPABASE_URL}/auth/v1/admin/users/${user_id}`,
-          {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-              'apikey': SUPABASE_SERVICE_ROLE_KEY,
-            },
-          }
-        );
-
-        if (!getUserResponse.ok) {
-          const errorText = await getUserResponse.text();
-          console.error('Failed to fetch user:', errorText);
-          return new Response(
-            JSON.stringify({
-              success: false,
-              verified: true,
-              error: `OTP verified but failed to fetch user profile: ${errorText}`,
-            }),
-            {
-              status: 500,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            }
-          );
-        }
-
-        const userData = await getUserResponse.json();
-        const currentMetadata = userData.user_metadata || {};
-        console.log('Current user metadata:', currentMetadata);
-
-        // Merge with existing metadata
-        const updatedMetadata = {
-          ...currentMetadata,
-          phone_verified: true,
-          phone_number: phone,
-        };
-        console.log('Updated metadata:', updatedMetadata);
-
-        // Use REST API to update user metadata
-        const updateResponse = await fetch(
-          `${SUPABASE_URL}/auth/v1/admin/users/${user_id}`,
-          {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-              'apikey': SUPABASE_SERVICE_ROLE_KEY,
-            },
-            body: JSON.stringify({
-              user_metadata: updatedMetadata,
-            }),
-          }
-        );
-
-        if (!updateResponse.ok) {
-          const errorData = await updateResponse.text();
-          console.error('Error updating user metadata:', errorData);
-          
-          return new Response(
-            JSON.stringify({
-              success: false,
-              verified: true,
-              error: `OTP verified but failed to update user profile: ${errorData}`,
-            }),
-            {
-              status: 500,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            }
-          );
-        }
-        
-        console.log('Phone verification saved to user metadata successfully');
-      } catch (metadataError) {
-        console.error('Exception updating user metadata:', metadataError);
-        const errorMessage = metadataError instanceof Error ? metadataError.message : 'Unknown error';
-        
-        return new Response(
-          JSON.stringify({
-            success: false,
-            verified: true,
-            error: `OTP verified but failed to update user profile: ${errorMessage}`,
-          }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          }
-        );
-      }
-    }
 
     return new Response(
       JSON.stringify({

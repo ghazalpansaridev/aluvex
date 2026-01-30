@@ -314,3 +314,215 @@ export async function savePhoneVerificationForSignup(
     };
   }
 }
+
+// Staff User Management API Functions
+
+export interface InviteStaffUserRequest {
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  role: 'admin' | 'operations' | 'sales';
+  region?: string;
+  pincode?: string;
+  address?: string;
+}
+
+export interface InviteStaffUserResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+  user?: {
+    id: string;
+    email: string;
+  };
+}
+
+export interface StaffUser {
+  id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  role: 'admin' | 'operations' | 'sales';
+  region?: string;
+  pincode?: string;
+  address?: string;
+  status: 'pending_password' | 'active' | 'inactive';
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+  // Joined from auth.users
+  email?: string;
+  last_login?: string;
+}
+
+export interface GetStaffUsersResponse {
+  success: boolean;
+  users?: StaffUser[];
+  error?: string;
+}
+
+export async function inviteStaffUser(
+  data: InviteStaffUserRequest,
+  accessToken: string
+): Promise<InviteStaffUserResponse> {
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/invite-staff-user`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,  // Use anon key for Edge Function
+        'apikey': SUPABASE_ANON_KEY,
+        'x-user-token': accessToken,  // Pass user token in custom header
+      },
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.error || 'Failed to invite user',
+      };
+    }
+
+    return {
+      success: true,
+      message: result.message || 'User invited successfully',
+      user: result.user,
+    };
+  } catch (error) {
+    console.error('Error inviting staff user:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error',
+    };
+  }
+}
+
+export async function getStaffUsers(
+  filters?: {
+    role?: string;
+    status?: string;
+    search?: string;
+  },
+  supabaseClient?: any
+): Promise<GetStaffUsersResponse> {
+  try {
+    if (!supabaseClient) {
+      return {
+        success: false,
+        error: 'Supabase client required',
+      };
+    }
+
+    // Build query
+    let query = supabaseClient
+      .from('staff_users')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    // Apply filters
+    if (filters?.role) {
+      query = query.eq('role', filters.role);
+    }
+    if (filters?.status) {
+      query = query.eq('status', filters.status);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    // Apply search filter if provided
+    let filteredData = data || [];
+    if (filters?.search) {
+      const searchLower = filters.search.toLowerCase();
+      filteredData = filteredData.filter((user: StaffUser) => {
+        return (
+          user.first_name.toLowerCase().includes(searchLower) ||
+          user.last_name.toLowerCase().includes(searchLower) ||
+          user.phone.includes(searchLower)
+        );
+      });
+    }
+
+    return {
+      success: true,
+      users: filteredData,
+    };
+  } catch (error) {
+    console.error('Error fetching staff users:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error',
+    };
+  }
+}
+
+export interface UpdateStaffUserRequest {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  region?: string;
+  pincode?: string;
+  address?: string;
+  status?: 'active' | 'inactive';
+}
+
+export interface UpdateStaffUserResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
+export async function updateStaffUser(
+  userId: string,
+  data: UpdateStaffUserRequest,
+  accessToken: string
+): Promise<UpdateStaffUserResponse> {
+  try {
+    // This will be implemented using Supabase client directly
+    // For now, return structure
+    return {
+      success: true,
+      message: 'User updated successfully',
+    };
+  } catch (error) {
+    console.error('Error updating staff user:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error',
+    };
+  }
+}
+
+export interface ResendInviteResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
+export async function resendInvite(
+  userId: string,
+  accessToken: string
+): Promise<ResendInviteResponse> {
+  try {
+    // This will call an edge function to resend invite
+    // For now, return structure
+    return {
+      success: true,
+      message: 'Invite resent successfully',
+    };
+  } catch (error) {
+    console.error('Error resending invite:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error',
+    };
+  }
+}

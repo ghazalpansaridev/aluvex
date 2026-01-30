@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const metadata = supabaseUser.user_metadata || {};
     
     // Check if role is explicitly set in metadata (for admin, ops, sales)
-    if (metadata.role && ['admin', 'ops', 'sales'].includes(metadata.role)) {
+    if (metadata.role && ['admin', 'operations', 'sales'].includes(metadata.role)) {
       return {
         role: metadata.role as UserRole,
         retailer: null,
