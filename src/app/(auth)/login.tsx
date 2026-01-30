@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,25 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Clear any stale recovery sessions on mount
+  useEffect(() => {
+    const clearStaleSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        // If there's a session but user is on login page, it might be stale/recovery session
+        if (session) {
+          console.log('Found existing session on login page, clearing it...');
+          await supabase.auth.signOut();
+        }
+      } catch (err) {
+        console.log('Error clearing stale session:', err);
+      }
+    };
+
+    clearStaleSession();
+  }, []);
+
   const handleLogin = async () => {
     if (!email || !password) {
       setError('Please enter email and password');
@@ -29,6 +48,9 @@ export default function LoginScreen() {
     setError(null);
 
     try {
+      // Ensure clean state before login
+      await supabase.auth.signOut();
+      
       const { error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,

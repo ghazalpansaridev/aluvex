@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
+import { Platform } from 'react-native'
+import Constants from 'expo-constants'
 import { config } from './config'
 
 const supabaseUrl = config.supabaseUrl
@@ -11,8 +13,26 @@ console.log('Supabase Config:', {
   keyStart: supabaseAnonKey?.substring(0, 20) + '...',
 });
 
-// Create Supabase client for auth operations only
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Get the correct redirect URL based on platform
+const getRedirectUrl = () => {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+  const scheme = Constants.expoConfig?.scheme || 'myapp1208';
+  return `${scheme}://`;
+};
+
+// Create Supabase client for auth operations with proper deep linking
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    // Enable auto-detection of auth flow (handles password reset links)
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true, // Enable URL hash detection for password reset
+    // Use implicit flow for web (better compatibility with password reset)
+    flowType: Platform.OS === 'web' ? 'implicit' : 'pkce',
+  },
+})
 
 // Direct database operations helper (bypasses storage issues)
 export const supabaseDb = {

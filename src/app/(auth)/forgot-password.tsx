@@ -8,6 +8,7 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 import { supabase } from '../../lib/supabase';
 import { config } from '../../lib/config';
 import { Button, Input } from '../../components/ui';
@@ -31,34 +32,27 @@ export default function ForgotPasswordScreen() {
     try {
       console.log('Sending password reset email to:', email);
       
-      // Get the correct redirect URL dynamically
-      const redirectTo = typeof window !== 'undefined' 
-        ? `${window.location.origin}/reset-password`
-        : 'http://localhost:8081/reset-password';
+      // Get the correct redirect URL based on platform
+      let redirectTo: string;
+      
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        // For web, use the current origin
+        redirectTo = `${window.location.origin}/reset-password`;
+      } else {
+        // For mobile, use deep linking scheme
+        const scheme = Constants.expoConfig?.scheme || 'myapp1208';
+        redirectTo = `${scheme}://reset-password`;
+      }
       
       console.log('Redirect URL:', redirectTo);
       
-      // Use direct API call to avoid client hanging
-      const response = await fetch(`${config.supabaseUrl}/auth/v1/recover`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': config.supabaseAnonKey,
-        },
-        body: JSON.stringify({
-          email,
-          options: {
-            redirectTo
-          }
-        })
+      // Use Supabase SDK instead of direct API call for better compatibility
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo,
       });
 
-      console.log('Reset email response:', response.status, response.statusText);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Reset email error:', errorData);
-        throw new Error(errorData.message || `Failed to send reset email: ${response.status}`);
+      if (resetError) {
+        throw resetError;
       }
 
       console.log('Password reset email sent successfully');

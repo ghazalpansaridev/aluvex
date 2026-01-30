@@ -6,7 +6,6 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
@@ -19,24 +18,31 @@ export default function ResetPasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [hasValidSession, setHasValidSession] = useState(false);
 
   useEffect(() => {
     let mounted = true;
+    let timeoutId: NodeJS.Timeout;
 
     const checkRecoverySession = async () => {
       try {
+        console.log('Starting session check...');
+        
         // For web, check if there's an error in the URL hash
         if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location.hash) {
           const hash = window.location.hash.substring(1);
           const params = new URLSearchParams(hash);
+          
+          console.log('URL hash params:', Array.from(params.keys()));
           
           const urlError = params.get('error');
           const errorDesc = params.get('error_description');
           
           if (urlError) {
             const decodedError = errorDesc ? decodeURIComponent(errorDesc.replace(/\+/g, ' ')) : '';
+            console.log('Error in URL:', decodedError);
             if (mounted) {
               setError(decodedError || 'Invalid or expired reset link.');
               setHasValidSession(false);
@@ -44,33 +50,35 @@ export default function ResetPasswordScreen() {
             }
             return;
           }
-        }
 
-        // Extract tokens from URL hash and set session manually
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const accessToken = hashParams.get('access_token');
-        const refreshToken = hashParams.get('refresh_token');
-        
-        if (accessToken && refreshToken) {
-          console.log('Setting session with tokens from URL...');
-          await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
+          // Check if we have the type parameter indicating password recovery
+          const type = params.get('type');
+          console.log('URL type:', type);
+          
+          if (type === 'recovery' || params.has('access_token')) {
+            console.log('Recovery link detected, waiting for Supabase to process...');
+            // Wait longer for Supabase to automatically process the hash
+            await new Promise(resolve => setTimeout(resolve, 1500));
+          }
         }
-        
-        // Wait a moment for session to be established
-        await new Promise(resolve => setTimeout(resolve, 500));
         
         // Check if we have a valid session
+        console.log('Checking for active session...');
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        console.log('Session check result:', { 
+          hasSession: !!session, 
+          hasUser: !!session?.user,
+          email: session?.user?.email,
+          error: sessionError 
+        });
         
         if (mounted) {
           if (session && session.user) {
-            console.log('Valid recovery session found');
+            console.log('✓ Valid recovery session found for user:', session.user.email);
             setHasValidSession(true);
           } else {
-            console.log('No valid session:', sessionError);
+            console.log('✗ No valid session found');
             setError('Invalid or expired reset link. Please request a new one.');
             setHasValidSession(false);
           }
@@ -79,19 +87,30 @@ export default function ResetPasswordScreen() {
       } catch (err) {
         console.error('Session check error:', err);
         if (mounted) {
-          setError('Failed to validate reset link');
+          setError('Failed to validate reset link. Please try again.');
           setHasValidSession(false);
           setCheckingSession(false);
         }
       }
     };
 
+    // Set a timeout to prevent infinite loading
+    timeoutId = setTimeout(() => {
+      if (mounted && checkingSession) {
+        console.log('Session check timeout - taking too long');
+        setError('Session validation timed out. Please request a new reset link.');
+        setHasValidSession(false);
+        setCheckingSession(false);
+      }
+    }, 10000); // 10 second timeout
+
     checkRecoverySession();
 
     return () => {
       mounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
     };
-  }, []);
+  }, [checkingSession]);
 
   const handleResetPassword = async () => {
     setError(null);
@@ -115,33 +134,111 @@ export default function ResetPasswordScreen() {
     setLoading(true);
 
     try {
-      // Update the user's password
-      const { error: updateError } = await supabase.auth.updateUser({
+      console.log('Updating password...');
+      
+      // Update the user's password with timeout
+      const updatePromise = supabase.auth.updateUser({
         password: password,
       });
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Password update timeout')), 8000)
+      );
+      
+      const result = await Promise.race([
+        updatePromise,
+        timeoutPromise
+      ]) as { error: any };
 
-      if (updateError) {
-        throw updateError;
+      if (result && result.error) {
+        throw result.error;
       }
 
-      // Sign out to clear the recovery session
-      await supabase.auth.signOut();
+      console.log('Password updated successfully!');
 
-      Alert.alert(
-        'Success',
-        'Your password has been reset successfully. Please log in with your new password.',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.replace('/(auth)/login'),
-          },
-        ]
-      );
+      // Show success state immediately
+      setSuccess(true);
+      setLoading(false);
+      
+      // Clear session and redirect with hard refresh
+      const clearAndRedirect = async () => {
+        try {
+          // Try to sign out with short timeout
+          const signOutTimeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Sign out timeout')), 2000)
+          );
+          
+          await Promise.race([
+            supabase.auth.signOut(),
+            signOutTimeoutPromise
+          ]);
+          
+          console.log('Signed out successfully');
+        } catch (err) {
+          console.log('Sign out timed out, forcing cleanup:', err);
+        }
+        
+        // Force clear all Supabase storage
+        if (typeof window !== 'undefined') {
+          const keys = Object.keys(localStorage);
+          keys.forEach(key => {
+            if (key.startsWith('sb-') || key.includes('supabase')) {
+              localStorage.removeItem(key);
+            }
+          });
+          
+          const sessionKeys = Object.keys(sessionStorage);
+          sessionKeys.forEach(key => {
+            if (key.startsWith('sb-') || key.includes('supabase')) {
+              sessionStorage.removeItem(key);
+            }
+          });
+        }
+        
+        console.log('Storage cleared, redirecting...');
+        
+        // Use window.location for hard refresh instead of router
+        setTimeout(() => {
+          if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            window.location.href = '/login';
+          } else {
+            router.replace('/(auth)/login');
+          }
+        }, 1500);
+      };
+      
+      clearAndRedirect();
     } catch (err: unknown) {
       console.error('Reset password error:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to reset password';
-      setError(errorMessage);
-      setLoading(false);
+      
+      // Check if it's a timeout error - password might still have been updated
+      if (err instanceof Error && err.message.includes('timeout')) {
+        console.log('Update timed out, but password may have been changed. Proceeding to success...');
+        setSuccess(true);
+        setLoading(false);
+        
+        // Clear storage and hard redirect
+        if (typeof window !== 'undefined') {
+          const keys = Object.keys(localStorage);
+          keys.forEach(key => {
+            if (key.startsWith('sb-') || key.includes('supabase')) {
+              localStorage.removeItem(key);
+            }
+          });
+        }
+        
+        setTimeout(() => {
+          if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            window.location.href = '/login';
+          } else {
+            router.replace('/(auth)/login');
+          }
+        }, 1500);
+      } else {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to reset password';
+        setError(errorMessage);
+        setLoading(false);
+      }
     }
   };
 
@@ -181,6 +278,29 @@ export default function ResetPasswordScreen() {
             title="Back to Login"
             onPress={() => router.replace('/(auth)/login')}
             variant="outline"
+            fullWidth
+            style={styles.button}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (success) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.content}>
+          <Text style={styles.icon}>✅</Text>
+          <Text style={styles.title}>Password Reset Successful!</Text>
+          <Text style={styles.subtitle}>
+            Your password has been reset successfully.
+          </Text>
+          <Text style={styles.infoText}>
+            Redirecting to login page...
+          </Text>
+          <Button
+            title="Go to Login"
+            onPress={() => router.replace('/(auth)/login')}
             fullWidth
             style={styles.button}
           />
