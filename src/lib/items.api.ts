@@ -70,10 +70,16 @@ export async function fetchItems(filters: ItemFilters = {}): Promise<ItemWithDet
   if (error) throw error;
 
   // Transform data to include pincodes array
-  const items = (data || []).map((item: any) => ({
+  let items = (data || []).map((item: any) => ({
     ...item,
     available_pincodes: item.item_pincodes?.map((p: any) => p.pincode) || [],
   }));
+
+  // Client-side safety filter: Only show active items if no status filter or status is active
+  // This ensures draft/inactive items never leak through due to RLS policy issues
+  if (!filters.status || filters.status === 'active') {
+    items = items.filter((item: ItemWithDetails) => item.status === 'active');
+  }
 
   // Filter by pincode if provided (post-query filter)
   if (filters.pincode) {

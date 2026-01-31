@@ -20,7 +20,7 @@ export default function RetailerLayout() {
       screenOptions={{
         tabBarActiveTintColor: '#007AFF',
         tabBarInactiveTintColor: '#999',
-        headerShown: true,
+        headerShown: false,
       }}
     >
       <Tabs.Screen
@@ -28,6 +28,7 @@ export default function RetailerLayout() {
         options={{
           title: 'Catalog',
           tabBarIcon: ({ color }) => <TabIcon name="grid" color={color} />,
+          headerShown: false,
         }}
       />
       <Tabs.Screen

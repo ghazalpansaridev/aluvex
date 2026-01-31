@@ -1,0 +1,312 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  Dimensions,
+  TouchableOpacity,
+} from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useAuth } from '../../../lib/auth-context';
+import { useItem } from '../../../hooks/useItems';
+import { LoadingSpinner, Button, Badge } from '../../../components/ui';
+import { PriceDisplay } from '../../../components/catalog';
+import { getPrimaryImage, getStockStatus, formatDiscount, calculateDiscountedPrice } from '../../../lib/utils';
+
+const { width } = Dimensions.get('window');
+
+/**
+ * Product Detail Screen
+ * Displays comprehensive product information with image gallery
+ * - Approved retailers see discounted pricing
+ * - Pending retailers see MRP only
+ * - View-only mode (no cart/favorites in this phase)
+ */
+export default function ProductDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const { retailerStatus } = useAuth();
+  const { item, loading, error } = useItem(id);
+
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
+  const isPending = retailerStatus === 'pending';
+
+  if (loading) {
+    return <LoadingSpinner fullScreen message="Loading product..." />;
+  }
+
+  if (error || !item) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>
+          {error || 'Product not found'}
+        </Text>
+        <Button title="Go Back" onPress={() => router.back()} />
+      </View>
+    );
+  }
+
+  const stockStatus = getStockStatus(item.current_stock, item.min_stock_level);
+  const isOutOfStock = item.current_stock <= 0;
+  const images = item.images || [];
+  const categoryDiscount = item.category?.discount_percent || 0;
+  const subcategoryDiscount = item.subcategory?.discount_percent;
+  const discountedPrice = calculateDiscountedPrice(
+    item.mrp,
+    categoryDiscount,
+    subcategoryDiscount
+  );
+  const hasDiscount = discountedPrice < item.mrp;
+  const discountPercent = subcategoryDiscount && subcategoryDiscount > 0 
+    ? subcategoryDiscount 
+    : categoryDiscount;
+
+  return (
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        {/* Image gallery */}
+        <View style={styles.imageContainer}>
+          <Image
+            source={{ uri: images[selectedImageIndex]?.image_url || getPrimaryImage(images) }}
+            style={styles.mainImage}
+            resizeMode="cover"
+          />
+          {/* Discount badge overlay */}
+          {hasDiscount && !isPending && (
+            <View style={styles.discountBadgeOverlay}>
+              <Text style={styles.discountBadgeText}>
+                {formatDiscount(discountPercent)}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Thumbnail strip (if multiple images) */}
+        {images.length > 1 && (
+          <ScrollView
+            horizontal
+            style={styles.thumbnailContainer}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.thumbnailContent}
+          >
+            {images.map((img, index) => (
+              <TouchableOpacity
+                key={img.id}
+                onPress={() => setSelectedImageIndex(index)}
+                style={[
+                  styles.thumbnail,
+                  selectedImageIndex === index && styles.thumbnailActive,
+                ]}
+              >
+                <Image
+                  source={{ uri: img.image_url }}
+                  style={styles.thumbnailImage}
+                  resizeMode="cover"
+                />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+
+        {/* Product info */}
+        <View style={styles.infoContainer}>
+          {/* SKU */}
+          <Text style={styles.sku}>SKU: {item.sku}</Text>
+          
+          {/* Product name */}
+          <Text style={styles.name}>{item.name}</Text>
+
+          {/* Price */}
+          <View style={styles.priceRow}>
+            <PriceDisplay
+              mrp={item.mrp}
+              categoryDiscount={categoryDiscount}
+              subcategoryDiscount={subcategoryDiscount}
+              showMrpOnly={isPending}
+              size="lg"
+            />
+          </View>
+
+          {/* Stock status */}
+          <View style={styles.stockRow}>
+            <Badge
+              label={stockStatus.label}
+              variant={stockStatus.variant}
+              size="sm"
+            />
+            {item.current_stock > 0 && item.current_stock <= 10 && (
+              <Text style={styles.stockWarning}>
+                Only {item.current_stock} left!
+              </Text>
+            )}
+          </View>
+
+          {/* Category breadcrumb */}
+          <View style={styles.categoryRow}>
+            <Text style={styles.categoryLabel}>Category: </Text>
+            <Text style={styles.categoryValue}>
+              {item.category?.name}
+              {item.subcategory && ` > ${item.subcategory.name}`}
+            </Text>
+          </View>
+
+          {/* Unit */}
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Unit: </Text>
+            <Text style={styles.infoValue}>{item.unit}</Text>
+          </View>
+
+          {/* Description */}
+          {item.description && (
+            <View style={styles.descriptionContainer}>
+              <Text style={styles.descriptionTitle}>Description</Text>
+              <Text style={styles.description}>{item.description}</Text>
+            </View>
+          )}
+        </View>
+      </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: '#fff',
+  },
+  errorText: {
+    fontSize: 18,
+    color: '#666',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  imageContainer: {
+    position: 'relative',
+    backgroundColor: '#f9f9f9',
+  },
+  mainImage: {
+    width: width,
+    height: width,
+  },
+  discountBadgeOverlay: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    backgroundColor: '#FF3B30',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  discountBadgeText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  thumbnailContainer: {
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  thumbnailContent: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  thumbnail: {
+    width: 60,
+    height: 60,
+    marginRight: 8,
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  thumbnailActive: {
+    borderColor: '#007AFF',
+  },
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
+  },
+  infoContainer: {
+    padding: 16,
+  },
+  sku: {
+    fontSize: 12,
+    color: '#999',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  name: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 16,
+    lineHeight: 28,
+  },
+  priceRow: {
+    marginBottom: 16,
+  },
+  stockRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  stockWarning: {
+    fontSize: 12,
+    color: '#FF9500',
+    fontWeight: '500',
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+    flexWrap: 'wrap',
+  },
+  categoryLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  categoryValue: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  infoLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
+  },
+  descriptionContainer: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  descriptionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  description: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 22,
+  },
+});

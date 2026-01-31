@@ -57,9 +57,7 @@ export default function RetailerCatalogScreen() {
   };
 
   const handleProductPress = (itemId: string) => {
-    // For now, just log. Product detail page can be added later
-    console.log('Product pressed:', itemId);
-    // Future: router.push(`/(retailer)/catalog/${itemId}`);
+    router.push(`/(retailer)/catalog/${itemId}`);
   };
 
   const renderItem = useCallback(
