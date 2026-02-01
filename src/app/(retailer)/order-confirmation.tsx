@@ -51,10 +51,7 @@ export default function OrderConfirmationScreen() {
   }
 
   const handleViewOrder = () => {
-    // Future: Navigate to order details
-    // router.push(`/(retailer)/orders/${order.id}`);
-    console.log('View order details:', order.id);
-    router.push('/(retailer)/orders');
+    router.push(`/(retailer)/orders/${order.id}`);
   };
 
   const handleContinueShopping = () => {

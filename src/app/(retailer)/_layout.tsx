@@ -22,7 +22,7 @@ export default function RetailerLayout() {
       screenOptions={{
         tabBarActiveTintColor: '#007AFF',
         tabBarInactiveTintColor: '#999',
-        headerShown: false,
+        headerShown: true,
       }}
     >
       <Tabs.Screen
@@ -60,6 +60,27 @@ export default function RetailerLayout() {
         options={{
           title: 'Settings',
           tabBarIcon: ({ color }) => <TabIcon name="settings" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="checkout"
+        options={{
+          title: 'Checkout',
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="order-confirmation"
+        options={{
+          title: 'Order Confirmation',
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="orders/[id]"
+        options={{
+          title: 'Order Details',
+          href: null,
         }}
       />
     </Tabs>

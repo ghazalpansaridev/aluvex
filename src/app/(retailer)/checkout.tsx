@@ -44,7 +44,9 @@ export default function CheckoutScreen() {
 
     try {
       setPlacingOrder(true);
-      const order = await createOrder(retailer.id, cartItems);
+      // Format delivery address
+      const deliveryAddress = `${retailer.business_name}\n${retailer.business_address}\n${retailer.city}, ${retailer.state} - ${retailer.pincode}`;
+      const order = await createOrder(retailer.id, cartItems, deliveryAddress);
       console.log('Order placed successfully:', order.order_number);
       // Navigate to confirmation screen with order ID
       router.replace(`/(retailer)/order-confirmation?orderId=${order.id}`);

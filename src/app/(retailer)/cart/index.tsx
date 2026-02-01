@@ -9,7 +9,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter, useFocusEffect, useNavigation } from 'expo-router';
 import { useCart } from '../../../hooks/useCart';
 import { LoadingSpinner, EmptyState, Button } from '../../../components/ui';
 import { CartItem, CartSummary } from '../../../components/cart';
@@ -21,6 +21,7 @@ import { CartItem, CartSummary } from '../../../components/cart';
  */
 export default function CartScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const {
     cartItems,
     cartCount,
@@ -35,6 +36,18 @@ export default function CartScreen() {
   } = useCart();
 
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
+
+  // Set header with Clear button
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () =>
+        cartItems.length > 0 ? (
+          <TouchableOpacity onPress={handleClearCart}>
+            <Text style={styles.clearButton}>Clear</Text>
+          </TouchableOpacity>
+        ) : null,
+    });
+  }, [navigation, cartItems.length]);
 
   // Refresh cart when screen comes into focus
   useFocusEffect(
@@ -172,14 +185,6 @@ export default function CartScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header with clear button */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Cart ({cartCount} items)</Text>
-        <TouchableOpacity onPress={handleClearCart}>
-          <Text style={styles.clearButton}>Clear</Text>
-        </TouchableOpacity>
-      </View>
-
       {/* Cart items list */}
       <FlatList
         data={cartItems}
@@ -234,24 +239,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#333',
-  },
   clearButton: {
     fontSize: 16,
     color: '#FF3B30',
     fontWeight: '500',
+    marginRight: 16,
   },
   actions: {
     flexDirection: 'row',

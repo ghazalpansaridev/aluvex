@@ -22,31 +22,23 @@ function generateOrderNumber(): string {
  * Create order from cart items
  * Steps:
  * 1. Calculate order totals
- * 2. Get retailer's delivery address
- * 3. Create order record
- * 4. Create order_items records
- * 5. Clear cart
- * 6. Return created order
+ * 2. Create order record with provided delivery address
+ * 3. Create order_items records
+ * 4. Clear cart
+ * 5. Return created order
  */
 export async function createOrder(
   retailerId: string,
-  cartItems: CartItemWithDetails[]
+  cartItems: CartItemWithDetails[],
+  deliveryAddress: string
 ): Promise<OrderWithItems> {
   if (!cartItems || cartItems.length === 0) {
     throw new Error('Cart is empty');
   }
 
-  // Get retailer's delivery address
-  const { data: retailer, error: retailerError } = await supabase
-    .from('retailers')
-    .select('business_name, business_address, city, state, pincode')
-    .eq('id', retailerId)
-    .single();
-
-  if (retailerError) throw retailerError;
-
-  // Format delivery address
-  const deliveryAddress = `${retailer.business_name}\n${retailer.business_address}\n${retailer.city}, ${retailer.state} - ${retailer.pincode}`;
+  if (!deliveryAddress) {
+    throw new Error('Delivery address is required');
+  }
 
   // Calculate order totals
   const subtotal = cartItems.reduce((sum, cartItem) => {
