@@ -24,11 +24,11 @@ export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({
   onClose,
   children,
 }) => {
-  const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
+  const slideAnim = useRef(new Animated.Value(DRAWER_WIDTH)).current;
 
   useEffect(() => {
     Animated.timing(slideAnim, {
-      toValue: isOpen ? 0 : -DRAWER_WIDTH,
+      toValue: isOpen ? 0 : DRAWER_WIDTH,
       duration: 300,
       useNativeDriver: true,
     }).start();
@@ -97,14 +97,14 @@ const styles = StyleSheet.create({
   },
   drawer: {
     position: 'absolute',
-    left: 0,
+    right: 0,
     top: 0,
     bottom: 0,
     width: DRAWER_WIDTH,
     backgroundColor: '#fff',
     shadowColor: '#000',
     shadowOffset: {
-      width: 2,
+      width: -2,
       height: 0,
     },
     shadowOpacity: 0.25,
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     padding: 8,
-    marginLeft: 8,
+    marginRight: 8,
   },
   hamburgerIcon: {
     width: 28,

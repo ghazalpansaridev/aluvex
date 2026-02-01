@@ -17,6 +17,7 @@ import { Badge } from '../../../components/ui/Badge';
 import { LoadingSpinner } from '../../../components/ui/LoadingSpinner';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { AddUserModal } from './add-user-modal';
+import { EditUserModal } from './edit-user-modal';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../lib/auth-context';
 import { StaffUser } from '../../../types/database';
@@ -27,6 +28,7 @@ export default function AdminUsersScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<StaffUser | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [menuVisible, setMenuVisible] = useState<string | null>(null);
@@ -84,8 +86,8 @@ export default function AdminUsersScreen() {
 
   const handleEditUser = (user: StaffUser) => {
     setMenuVisible(null);
-    // TODO: Implement edit user modal
-    Alert.alert('Edit User', `Edit functionality for ${user.first_name} ${user.last_name} will be implemented soon.`);
+    setSelectedUser(user);
+    setShowEditModal(true);
   };
 
   const handleDeleteUser = (user: StaffUser) => {
@@ -210,11 +212,18 @@ export default function AdminUsersScreen() {
   const renderUserItem = ({ item }: { item: StaffUser }) => (
     <View style={styles.userRow}>
       <View style={styles.userRowContent}>
-        {/* Name */}
-        <View style={styles.nameColumn}>
+        {/* User (Name + Status) */}
+        <View style={styles.userColumn}>
           <Text style={styles.userName}>
             {item.first_name} {item.last_name}
           </Text>
+          <View style={styles.statusBadgeWrapper}>
+            <Badge
+              label={getStatusLabel(item.status)}
+              variant={getStatusBadgeVariant(item.status)}
+              size="sm"
+            />
+          </View>
         </View>
 
         {/* Email */}
@@ -225,31 +234,12 @@ export default function AdminUsersScreen() {
         </View>
 
         {/* Role Badge */}
-        <View style={styles.badgeColumn}>
+        <View style={styles.roleColumn}>
           <Badge
             label={getRoleLabel(item.role)}
             variant="info"
             size="sm"
           />
-        </View>
-
-        {/* Status Badge */}
-        <View style={styles.badgeColumn}>
-          <Badge
-            label={getStatusLabel(item.status)}
-            variant={getStatusBadgeVariant(item.status)}
-            size="sm"
-          />
-        </View>
-
-        {/* Details Button */}
-        <View style={styles.actionColumn}>
-          <TouchableOpacity
-            style={styles.detailsButton}
-            onPress={() => handleShowDetails(item)}
-          >
-            <Text style={styles.detailsButtonText}>Details</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Three-dot Menu */}
@@ -269,6 +259,13 @@ export default function AdminUsersScreen() {
                 onPress={() => setMenuVisible(null)}
               />
               <View style={styles.menuDropdown}>
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => handleShowDetails(item)}
+                >
+                  <Text style={styles.menuItemText}>👁️ View</Text>
+                </TouchableOpacity>
+                <View style={styles.menuDivider} />
                 <TouchableOpacity
                   style={styles.menuItem}
                   onPress={() => handleEditUser(item)}
@@ -346,20 +343,14 @@ export default function AdminUsersScreen() {
 
       {/* Table Header */}
       <View style={styles.tableHeader}>
-        <View style={styles.nameColumn}>
-          <Text style={styles.tableHeaderText}>Name</Text>
+        <View style={styles.userColumn}>
+          <Text style={styles.tableHeaderText}>User</Text>
         </View>
         <View style={styles.emailColumn}>
           <Text style={styles.tableHeaderText}>Email</Text>
         </View>
-        <View style={styles.badgeColumn}>
+        <View style={styles.roleColumn}>
           <Text style={styles.tableHeaderText}>Role</Text>
-        </View>
-        <View style={styles.badgeColumn}>
-          <Text style={styles.tableHeaderText}>Status</Text>
-        </View>
-        <View style={styles.actionColumn}>
-          <Text style={styles.tableHeaderText}>Action</Text>
         </View>
         <View style={styles.menuColumn}>
           <Text style={styles.tableHeaderText}></Text>
@@ -513,6 +504,16 @@ export default function AdminUsersScreen() {
         onClose={() => setShowAddModal(false)}
         onSuccess={handleAddSuccess}
       />
+
+      <EditUserModal
+        visible={showEditModal}
+        user={selectedUser}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedUser(null);
+        }}
+        onSuccess={handleAddSuccess}
+      />
     </View>
   );
 }
@@ -580,21 +581,17 @@ const styles = StyleSheet.create({
     padding: 12,
     alignItems: 'center',
   },
-  nameColumn: {
-    flex: 2,
+  userColumn: {
+    flex: 3,
     paddingRight: 8,
   },
   emailColumn: {
-    flex: 2.5,
+    flex: 3,
     paddingRight: 8,
   },
-  badgeColumn: {
-    flex: 1.5,
+  roleColumn: {
+    flex: 2,
     paddingRight: 8,
-  },
-  actionColumn: {
-    flex: 1,
-    alignItems: 'flex-end',
   },
   menuColumn: {
     width: 40,
@@ -605,21 +602,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#333',
+    marginBottom: 4,
+  },
+  statusBadgeWrapper: {
+    marginTop: 4,
   },
   userEmail: {
     fontSize: 14,
     color: '#666',
-  },
-  detailsButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-  },
-  detailsButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
   },
   menuButton: {
     padding: 8,

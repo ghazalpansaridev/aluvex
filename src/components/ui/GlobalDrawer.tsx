@@ -11,7 +11,7 @@ export const GlobalDrawer: React.FC<{ children: React.ReactNode }> = ({
 
   return (
     <View style={styles.container}>
-      {/* Hamburger Icon - positioned absolutely in top left */}
+      {/* Hamburger Icon - positioned absolutely in top right */}
       <View style={styles.hamburgerContainer}>
         <HamburgerIcon onPress={openDrawer} color="#333" />
       </View>
@@ -34,10 +34,10 @@ const styles = StyleSheet.create({
   hamburgerContainer: {
     position: 'absolute',
     top: Platform.OS === 'ios' ? 50 : 20,
-    left: 0,
+    right: 0,
     zIndex: 1000,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderRadius: 20,
-    marginLeft: 8,
+    marginRight: 8,
   },
 });
