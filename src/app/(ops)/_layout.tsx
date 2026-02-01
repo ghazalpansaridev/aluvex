@@ -22,20 +22,32 @@ export default function OpsLayout() {
       }}
     >
       <Tabs.Screen
-        name="orders"
-        options={{ title: 'Orders' }}
+        name="items"
+        options={{ 
+          title: 'Items',
+          tabBarLabel: 'Items',
+        }}
       />
       <Tabs.Screen
-        name="items"
-        options={{ title: 'Items' }}
+        name="orders"
+        options={{ 
+          title: 'Orders',
+          tabBarLabel: 'Orders',
+        }}
       />
       <Tabs.Screen
         name="sellers"
-        options={{ title: 'Sellers' }}
+        options={{ 
+          title: 'Sellers',
+          tabBarLabel: 'Sellers',
+        }}
       />
       <Tabs.Screen
         name="settings"
-        options={{ title: 'Settings' }}
+        options={{ 
+          title: 'Settings',
+          tabBarLabel: 'Settings',
+        }}
       />
     </Tabs>
   );

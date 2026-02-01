@@ -39,11 +39,11 @@ export default function Index() {
   // Route all authenticated users to catalog as home page
   switch (role) {
     case 'admin':
-      // Admin users go to standard catalog
-      return <Redirect href="/categories" />;
+      // Admin users go to Items tab in Ops layout
+      return <Redirect href="/(ops)/items" />;
     case 'operations':
-      // Operations users go to standard catalog
-      return <Redirect href="/categories" />;
+      // Operations users go to Items tab in Ops layout
+      return <Redirect href="/(ops)/items" />;
     case 'sales':
       // Sales users go to sales catalog
       return <Redirect href="/(sales)/catalog" />;

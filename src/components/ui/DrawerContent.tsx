@@ -134,6 +134,13 @@ export const DrawerContent: React.FC<DrawerContentProps> = ({ onClose }) => {
                   <Text style={styles.menuIcon}>📋</Text>
                   <Text style={styles.menuText}>Orders</Text>
                 </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => handleNavigation('/(ops)/items')}
+                >
+                  <Text style={styles.menuIcon}>📦</Text>
+                  <Text style={styles.menuText}>Items</Text>
+                </TouchableOpacity>
               </>
             )}
 
