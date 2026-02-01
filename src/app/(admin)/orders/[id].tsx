@@ -18,6 +18,7 @@ import {
   fetchOrderDetails,
   createShipment,
   cancelOrder,
+  updateOrderStatus,
 } from '../../../lib/orders.api';
 import { OrderDetailsResponse } from '../../../types/database';
 import { formatPrice } from '../../../lib/utils';
@@ -106,6 +107,25 @@ export default function AdminOrderDetailsScreen() {
     }
   };
 
+  const handleProcessOrder = async () => {
+    if (!order || !user) return;
+
+    try {
+      await updateOrderStatus(order.id, 'processing');
+      Alert.alert('Success', 'Order moved to processing', [
+        {
+          text: 'OK',
+          onPress: () => {
+            loadOrderDetails();
+          },
+        },
+      ]);
+    } catch (err: any) {
+      console.error('Failed to process order:', err);
+      Alert.alert('Error', err.message || 'Failed to process order');
+    }
+  };
+
   const getStatusVariant = (status: string) => {
     switch (status) {
       case 'placed':
@@ -152,8 +172,8 @@ export default function AdminOrderDetailsScreen() {
     );
   }
 
-  const canCreateShipment = order.status === 'placed' || order.status === 'partially_shipped';
-  const canCancel = order.status === 'placed' || order.status === 'partially_shipped';
+  const canCreateShipment = order.status === 'processing' || order.status === 'partially_shipped';
+  const canCancel = order.status === 'placed' || order.status === 'processing' || order.status === 'partially_shipped';
 
   return (
     <View style={styles.container}>
@@ -205,6 +225,17 @@ export default function AdminOrderDetailsScreen() {
             )}
           </View>
         </View>
+
+        {/* Process Order Button - Only for 'placed' status */}
+        {order.status === 'placed' && (
+          <View style={styles.section}>
+            <Button
+              title="Process Order"
+              onPress={handleProcessOrder}
+              variant="primary"
+            />
+          </View>
+        )}
 
         {/* Create Shipment Section */}
         {canCreateShipment && order.items.some(item => item.remaining_quantity > 0) && (
