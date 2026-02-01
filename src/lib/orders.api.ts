@@ -1,7 +1,23 @@
 import { supabase } from './supabase';
-import { Order, OrderItem, Retailer } from '../types/database';
+import {
+  Order,
+  OrderItem,
+  Retailer,
+  OrderWithRetailer,
+  OrderDetailsResponse,
+  OrderFilters,
+  Shipment,
+  ShipmentItem,
+  OrderStatus,
+} from '../types/database';
 import { CartItemWithDetails } from './cart.api';
-import { calculateDiscountedPrice } from './utils';
+import {
+  calculateDiscountedPrice,
+  generateShipmentNumber,
+  generateInvoiceNumber,
+  calculateOrderStatus,
+  validateShipmentQuantities,
+} from './utils';
 import { clearCart } from './cart.api';
 
 export interface OrderWithItems extends Order {
@@ -121,7 +137,18 @@ export async function fetchOrderById(orderId: string): Promise<OrderWithItems | 
   const { data, error } = await supabase
     .from('orders')
     .select(`
-      *,
+      id,
+      order_number,
+      retailer_id,
+      status,
+      subtotal,
+      total_freight,
+      grand_total,
+      delivery_address,
+      cancellation_reason,
+      cancelled_at,
+      created_at,
+      updated_at,
       items:order_items(*)
     `)
     .eq('id', orderId)
@@ -141,10 +168,433 @@ export async function fetchOrderById(orderId: string): Promise<OrderWithItems | 
 export async function fetchOrders(retailerId: string): Promise<Order[]> {
   const { data, error } = await supabase
     .from('orders')
-    .select('*')
+    .select(`
+      id,
+      order_number,
+      retailer_id,
+      status,
+      subtotal,
+      total_freight,
+      grand_total,
+      delivery_address,
+      cancellation_reason,
+      cancelled_at,
+      created_at,
+      updated_at
+    `)
     .eq('retailer_id', retailerId)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
   return data || [];
+}
+
+/**
+ * Fetch all orders with filters (admin/ops view)
+ * Includes retailer details and order items
+ */
+export async function fetchAllOrders(
+  filters?: OrderFilters
+): Promise<OrderWithRetailer[]> {
+  let query = supabase
+    .from('orders')
+    .select(`
+      id,
+      order_number,
+      retailer_id,
+      status,
+      subtotal,
+      total_freight,
+      grand_total,
+      delivery_address,
+      cancellation_reason,
+      cancelled_at,
+      created_at,
+      updated_at,
+      retailer:retailers(
+        id,
+        retailer_code,
+        business_name,
+        owner_phone,
+        pincode,
+        city,
+        state,
+        credit_limit,
+        outstanding_dues
+      ),
+      items:order_items(*)
+    `);
+
+  // Apply filters
+  if (filters?.status) {
+    query = query.eq('status', filters.status);
+  }
+
+  if (filters?.retailerId) {
+    query = query.eq('retailer_id', filters.retailerId);
+  }
+
+  if (filters?.pincode) {
+    query = query.eq('retailers.pincode', filters.pincode);
+  }
+
+  if (filters?.dateRange) {
+    query = query
+      .gte('created_at', filters.dateRange.start)
+      .lte('created_at', filters.dateRange.end);
+  }
+
+  if (filters?.searchQuery) {
+    // Search in order number or retailer business name
+    query = query.or(
+      `order_number.ilike.%${filters.searchQuery}%,retailer.business_name.ilike.%${filters.searchQuery}%`
+    );
+  }
+
+  // Order by created_at descending (newest first)
+  query = query.order('created_at', { ascending: false });
+
+  const { data, error } = await query;
+
+  if (error) throw error;
+  return (data || []) as OrderWithRetailer[];
+}
+
+/**
+ * Fetch order details with full shipment history
+ * Used for order processing screen
+ */
+export async function fetchOrderDetails(
+  orderId: string
+): Promise<OrderDetailsResponse | null> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select(`
+      id,
+      order_number,
+      retailer_id,
+      status,
+      subtotal,
+      total_freight,
+      grand_total,
+      delivery_address,
+      cancellation_reason,
+      cancelled_at,
+      created_at,
+      updated_at,
+      retailer:retailers(
+        id,
+        retailer_code,
+        business_name,
+        owner_name,
+        owner_phone,
+        business_address,
+        pincode,
+        city,
+        state,
+        credit_limit,
+        outstanding_dues
+      ),
+      items:order_items(*),
+      shipments(
+        id,
+        order_id,
+        shipment_number,
+        freight_charge,
+        notes,
+        invoice_number,
+        invoice_url,
+        created_at,
+        items:shipment_items(*)
+      )
+    `)
+    .eq('id', orderId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    throw error;
+  }
+
+  // Calculate remaining quantities for each order item
+  const itemsWithRemaining = data.items.map((item: OrderItem) => ({
+    ...item,
+    remaining_quantity: item.quantity - item.shipped_quantity,
+    shipment_items: [],
+  }));
+
+  return {
+    ...data,
+    items: itemsWithRemaining,
+  } as OrderDetailsResponse;
+}
+
+/**
+ * Create shipment for order items
+ * Steps:
+ * 1. Validate shipment quantities
+ * 2. Check stock availability
+ * 3. Create shipment record
+ * 4. Create shipment_items records
+ * 5. Update order_items.shipped_quantity
+ * 6. Update order status
+ * 7. Update order totals
+ * 8. Deduct from item stock
+ */
+export async function createShipment(data: {
+  orderId: string;
+  items: Array<{ orderItemId: string; itemId: string; quantity: number; unitPrice: number }>;
+  freightCharge: number;
+  notes?: string;
+  createdBy: string;
+}): Promise<Shipment> {
+  if (data.items.length === 0) {
+    throw new Error('At least one item is required for shipment');
+  }
+
+  if (data.freightCharge < 0) {
+    throw new Error('Freight charge must be 0 or greater');
+  }
+
+  // Fetch order items to validate quantities
+  const { data: orderItems, error: orderItemsError } = await supabase
+    .from('order_items')
+    .select('*')
+    .eq('order_id', data.orderId);
+
+  if (orderItemsError) throw orderItemsError;
+
+  // Validate shipment quantities
+  const validation = validateShipmentQuantities(
+    orderItems,
+    data.items.map(i => ({ orderItemId: i.orderItemId, quantity: i.quantity }))
+  );
+
+  if (!validation.valid) {
+    throw new Error(validation.errors.join('; '));
+  }
+
+  // Check stock availability for each item
+  const itemIds = data.items.map(i => i.itemId);
+  const { data: items, error: itemsError } = await supabase
+    .from('items')
+    .select('id, current_stock, name')
+    .in('id', itemIds);
+
+  if (itemsError) throw itemsError;
+
+  for (const shipmentItem of data.items) {
+    const item = items.find(i => i.id === shipmentItem.itemId);
+    if (!item) {
+      throw new Error(`Item not found: ${shipmentItem.itemId}`);
+    }
+    if (item.current_stock < shipmentItem.quantity) {
+      throw new Error(
+        `Insufficient stock for ${item.name}. Available: ${item.current_stock}, Requested: ${shipmentItem.quantity}`
+      );
+    }
+  }
+
+  // Generate shipment and invoice numbers
+  const shipmentNumber = generateShipmentNumber();
+  const invoiceNumber = generateInvoiceNumber();
+
+  // Create shipment record
+  const { data: shipment, error: shipmentError } = await supabase
+    .from('shipments')
+    .insert({
+      order_id: data.orderId,
+      shipment_number: shipmentNumber,
+      freight_charge: data.freightCharge,
+      notes: data.notes,
+      invoice_number: invoiceNumber,
+      created_by: data.createdBy,
+    })
+    .select()
+    .single();
+
+  if (shipmentError) throw shipmentError;
+
+  // Create shipment_items records
+  const shipmentItemsData = data.items.map(item => ({
+    shipment_id: shipment.id,
+    order_item_id: item.orderItemId,
+    item_id: item.itemId,
+    quantity: item.quantity,
+    unit_price: item.unitPrice,
+    line_total: item.quantity * item.unitPrice,
+  }));
+
+  const { error: shipmentItemsError } = await supabase
+    .from('shipment_items')
+    .insert(shipmentItemsData);
+
+  if (shipmentItemsError) throw shipmentItemsError;
+
+  // Update order_items.shipped_quantity
+  for (const item of data.items) {
+    const orderItem = orderItems.find(oi => oi.id === item.orderItemId);
+    if (!orderItem) continue;
+
+    const newShippedQuantity = orderItem.shipped_quantity + item.quantity;
+    
+    const { error: updateError } = await supabase
+      .from('order_items')
+      .update({ shipped_quantity: newShippedQuantity })
+      .eq('id', item.orderItemId);
+
+    if (updateError) throw updateError;
+  }
+
+  // Fetch updated order items to calculate new status
+  const { data: updatedOrderItems, error: updatedError } = await supabase
+    .from('order_items')
+    .select('*')
+    .eq('order_id', data.orderId);
+
+  if (updatedError) throw updatedError;
+
+  // Fetch current order to update totals
+  const { data: currentOrder, error: orderError } = await supabase
+    .from('orders')
+    .select('total_freight, subtotal, status')
+    .eq('id', data.orderId)
+    .single();
+
+  if (orderError) throw orderError;
+
+  // Calculate new order status (pass current status to preserve 'processing')
+  const newStatus = calculateOrderStatus(updatedOrderItems, currentOrder.status as OrderStatus);
+
+  // Update order with new status and totals
+  const newTotalFreight = currentOrder.total_freight + data.freightCharge;
+  const newGrandTotal = currentOrder.subtotal + newTotalFreight;
+
+  const { error: orderUpdateError } = await supabase
+    .from('orders')
+    .update({
+      status: newStatus,
+      total_freight: newTotalFreight,
+      grand_total: newGrandTotal,
+    })
+    .eq('id', data.orderId);
+
+  if (orderUpdateError) throw orderUpdateError;
+
+  // Deduct shipped quantities from item stock
+  for (const shipmentItem of data.items) {
+    const item = items.find(i => i.id === shipmentItem.itemId);
+    if (!item) continue;
+
+    const newStock = item.current_stock - shipmentItem.quantity;
+    
+    const { error: stockError } = await supabase
+      .from('items')
+      .update({ current_stock: newStock })
+      .eq('id', shipmentItem.itemId);
+
+    if (stockError) throw stockError;
+  }
+
+  // TODO: Create payment debit transaction if credit limit assigned
+  // TODO: Send notification to retailer
+  // TODO: Generate invoice PDF
+
+  return shipment;
+}
+
+/**
+ * Cancel order
+ * Can only cancel orders with status 'placed' or 'partially_shipped'
+ */
+export async function cancelOrder(
+  orderId: string,
+  reason: string,
+  cancelledBy: string
+): Promise<Order> {
+  if (!reason || reason.trim().length === 0) {
+    throw new Error('Cancellation reason is required');
+  }
+
+  // Fetch order to check current status
+  const { data: order, error: fetchError } = await supabase
+    .from('orders')
+    .select('status')
+    .eq('id', orderId)
+    .single();
+
+  if (fetchError) throw fetchError;
+
+  if (order.status === 'cancelled') {
+    throw new Error('Order is already cancelled');
+  }
+
+  if (order.status === 'shipped') {
+    throw new Error('Cannot cancel a fully shipped order');
+  }
+
+  // Update order status to cancelled
+  const { data: cancelledOrder, error: cancelError } = await supabase
+    .from('orders')
+    .update({
+      status: 'cancelled',
+      cancellation_reason: reason,
+      cancelled_by: cancelledBy,
+      cancelled_at: new Date().toISOString(),
+    })
+    .eq('id', orderId)
+    .select(`
+      id,
+      order_number,
+      retailer_id,
+      status,
+      subtotal,
+      total_freight,
+      grand_total,
+      delivery_address,
+      cancellation_reason,
+      cancelled_at,
+      created_at,
+      updated_at
+    `)
+    .single();
+
+  if (cancelError) throw cancelError;
+
+  // TODO: If credit limit assigned, reverse debit transaction
+  // TODO: Send notification to retailer
+
+  return cancelledOrder;
+}
+
+/**
+ * Update order status
+ * Used for quick status updates (e.g., processing an order)
+ */
+export async function updateOrderStatus(
+  orderId: string,
+  status: OrderStatus
+): Promise<Order> {
+  const { data, error } = await supabase
+    .from('orders')
+    .update({ status })
+    .eq('id', orderId)
+    .select(`
+      id,
+      order_number,
+      retailer_id,
+      status,
+      subtotal,
+      total_freight,
+      grand_total,
+      delivery_address,
+      cancellation_reason,
+      cancelled_at,
+      created_at,
+      updated_at
+    `)
+    .single();
+
+  if (error) throw error;
+  return data;
 }

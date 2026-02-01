@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useNavigation } from 'expo-router';
 import { supabase } from '../lib/supabase';
+import React from 'react';
 
 interface Subcategory {
   id: string;
@@ -21,9 +22,21 @@ interface Category {
 
 export default function GuestCatalogPage() {
   const router = useRouter();
+  const navigation = useNavigation();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Set header with Login button
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity onPress={handleLoginPress} style={{ marginRight: 16 }}>
+          <Text style={styles.headerButton}>Login</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
 
   const fetchCategories = async () => {
     try {
@@ -92,21 +105,21 @@ export default function GuestCatalogPage() {
 
   return (
     <View style={styles.container}>
-      {/* Guest Banner */}
-      <View style={styles.guestBanner}>
-        <Text style={styles.guestBannerTitle}>👋 Welcome, Guest!</Text>
-        <Text style={styles.guestBannerText}>
-          Browse our catalog. Login to place orders and access full features.
-        </Text>
-        <TouchableOpacity style={styles.loginButton} onPress={handleLoginPress}>
-          <Text style={styles.loginButtonText}>Login / Register</Text>
-        </TouchableOpacity>
-      </View>
-
       <FlatList
         data={categories}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
+        ListHeaderComponent={
+          <View style={styles.guestBanner}>
+            <Text style={styles.guestBannerTitle}>👋 Welcome, Guest!</Text>
+            <Text style={styles.guestBannerText}>
+              Browse our catalog. Login to place orders and access full features.
+            </Text>
+            <TouchableOpacity style={styles.loginButton} onPress={handleLoginPress}>
+              <Text style={styles.loginButtonText}>Login / Register</Text>
+            </TouchableOpacity>
+          </View>
+        }
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.categoryCard}
@@ -141,6 +154,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  headerButton: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
   guestBanner: {
     backgroundColor: '#4A90E2',
     padding: 20,
@@ -152,6 +170,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    marginBottom: 16,
   },
   guestBannerTitle: {
     fontSize: 24,
@@ -183,7 +202,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   listContainer: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
   categoryCard: {
     backgroundColor: '#ffffff',

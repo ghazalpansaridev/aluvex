@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '../../../lib/auth-context';
 import { EmptyState, LoadingSpinner, Badge } from '../../../components/ui';
 import { fetchOrders } from '../../../lib/orders.api';
@@ -39,9 +39,19 @@ export default function OrdersScreen() {
     }
   };
 
+  // Load orders on initial mount
   useEffect(() => {
     loadOrders();
   }, [retailer]);
+
+  // Reload orders when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (retailer) {
+        loadOrders();
+      }
+    }, [retailer])
+  );
 
   const handleRefresh = () => {
     setRefreshing(true);
