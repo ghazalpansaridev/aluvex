@@ -5,7 +5,7 @@ import {
   FlatList,
   RefreshControl,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '../../../lib/auth-context';
 import { useItems } from '../../../hooks/useItems';
 import { useCategories } from '../../../hooks/useCategories';
@@ -28,7 +28,7 @@ import { ItemFilters } from '../../../lib/items.api';
 export default function RetailerCatalogScreen() {
   const router = useRouter();
   const { retailer, retailerStatus } = useAuth();
-  const { addItem } = useCart();
+  const { addItem, getItemQuantity, getCartItemId, updateQuantity, refetch: refetchCart } = useCart();
 
   // Filters state
   const [filters, setFilters] = useState<ItemFilters>({
@@ -46,6 +46,13 @@ export default function RetailerCatalogScreen() {
 
   const isPending = retailerStatus === 'pending';
 
+  // Refresh cart when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      refetchCart();
+    }, [refetchCart])
+  );
+
   const handleCategorySelect = (categoryId: string | undefined) => {
     setFilters(prev => ({ ...prev, categoryId, subcategoryId: undefined }));
   };
@@ -62,7 +69,7 @@ export default function RetailerCatalogScreen() {
     router.push(`/(retailer)/catalog/${itemId}`);
   };
 
-  const handleAddToCart = async (item: any) => {
+  const handleIncrementQuantity = async (item: any) => {
     // Check if item available in retailer's pincode
     if (retailer?.pincode && !item.available_pincodes.includes(retailer.pincode)) {
       console.error('Item unavailable at your location');
@@ -70,10 +77,23 @@ export default function RetailerCatalogScreen() {
     }
     
     try {
-      await addItem(item.id, 1);
-      console.log('Added to cart successfully');
+      await addItem(item.id, 1); // Always add 1
     } catch (err: any) {
-      console.error('Failed to add to cart:', err.message);
+      console.error('Failed to update cart:', err.message);
+    }
+  };
+
+  const handleDecrementQuantity = async (itemId: string) => {
+    const cartItemId = getCartItemId(itemId);
+    if (!cartItemId) return;
+    
+    const currentQty = getItemQuantity(itemId);
+    if (currentQty > 0) {
+      try {
+        await updateQuantity(cartItemId, currentQty - 1); // Decrease by 1
+      } catch (err: any) {
+        console.error('Failed to update cart:', err.message);
+      }
     }
   };
 
@@ -83,11 +103,13 @@ export default function RetailerCatalogScreen() {
         item={item}
         onPress={() => handleProductPress(item.id)}
         showMrpOnly={isPending}
-        onAddToCart={() => handleAddToCart(item)}
-        showAddToCart={!isPending}
+        cartQuantity={getItemQuantity(item.id)}
+        onIncrementQuantity={() => handleIncrementQuantity(item)}
+        onDecrementQuantity={() => handleDecrementQuantity(item.id)}
+        showQuantityControls={!isPending}
       />
     ),
-    [isPending, retailer?.pincode]
+    [isPending, retailer?.pincode, getItemQuantity, getCartItemId]
   );
 
   const renderEmptyComponent = () => {

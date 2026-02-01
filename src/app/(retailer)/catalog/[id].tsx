@@ -13,7 +13,7 @@ import { useAuth } from '../../../lib/auth-context';
 import { useItem } from '../../../hooks/useItems';
 import { useCart } from '../../../hooks/useCart';
 import { LoadingSpinner, Button, Badge } from '../../../components/ui';
-import { PriceDisplay } from '../../../components/catalog';
+import { PriceDisplay, QuantityCapsule } from '../../../components/catalog';
 import { getPrimaryImage, getStockStatus, formatDiscount, calculateDiscountedPrice } from '../../../lib/utils';
 
 const { width } = Dimensions.get('window');
@@ -30,13 +30,14 @@ export default function ProductDetailScreen() {
   const router = useRouter();
   const { retailer, retailerStatus } = useAuth();
   const { item, loading, error } = useItem(id);
-  const { addItem } = useCart();
+  const { addItem, getItemQuantity, getCartItemId, updateQuantity } = useCart();
 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [quantity, setQuantity] = useState(1);
+  const [quantityToAdd, setQuantityToAdd] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
 
   const isPending = retailerStatus === 'pending';
+  const cartQuantity = item ? getItemQuantity(item.id) : 0;
 
   if (loading) {
     return <LoadingSpinner fullScreen message="Loading product..." />;
@@ -81,13 +82,39 @@ export default function ProductDetailScreen() {
 
     try {
       setAddingToCart(true);
-      await addItem(item.id, quantity);
-      console.log(`Added ${quantity} item(s) to cart successfully`);
-      setQuantity(1); // Reset quantity after adding
+      await addItem(item.id, quantityToAdd);
+      console.log(`Added ${quantityToAdd} item(s) to cart successfully`);
+      setQuantityToAdd(1); // Reset quantity after adding
     } catch (err: any) {
       console.error('Failed to add to cart:', err.message);
     } finally {
       setAddingToCart(false);
+    }
+  };
+
+  const handleIncrementQuantity = async () => {
+    if (!isAvailableInPincode) {
+      console.error('Item unavailable at your location');
+      return;
+    }
+    
+    try {
+      await addItem(item.id, 1);
+    } catch (err: any) {
+      console.error('Failed to update cart:', err.message);
+    }
+  };
+
+  const handleDecrementQuantity = async () => {
+    const cartItemId = getCartItemId(item.id);
+    if (!cartItemId) return;
+    
+    if (cartQuantity > 0) {
+      try {
+        await updateQuantity(cartItemId, cartQuantity - 1);
+      } catch (err: any) {
+        console.error('Failed to update cart:', err.message);
+      }
     }
   };
 
@@ -194,33 +221,46 @@ export default function ProductDetailScreen() {
             </View>
           )}
 
-          {/* Quantity selector - only for approved retailers */}
-          {!isPending && isAvailableInPincode && !isOutOfStock && (
+          {/* Quantity selector - only for approved retailers when NOT in cart */}
+          {!isPending && isAvailableInPincode && !isOutOfStock && cartQuantity === 0 && (
             <View style={styles.quantityContainer}>
-              <Text style={styles.quantityLabel}>Quantity</Text>
+              <Text style={styles.quantityLabel}>Add Quantity</Text>
               <View style={styles.quantityControls}>
                 <TouchableOpacity
                   style={styles.quantityButton}
-                  onPress={() => setQuantity(Math.max(1, quantity - 1))}
-                  disabled={quantity <= 1}
+                  onPress={() => setQuantityToAdd(Math.max(1, quantityToAdd - 1))}
+                  disabled={quantityToAdd <= 1}
                 >
                   <Text style={styles.quantityButtonText}>−</Text>
                 </TouchableOpacity>
-                <Text style={styles.quantityValue}>{quantity}</Text>
+                <Text style={styles.quantityValue}>{quantityToAdd}</Text>
                 <TouchableOpacity
                   style={styles.quantityButton}
-                  onPress={() => setQuantity(quantity + 1)}
+                  onPress={() => setQuantityToAdd(quantityToAdd + 1)}
                 >
                   <Text style={styles.quantityButtonText}>+</Text>
                 </TouchableOpacity>
               </View>
             </View>
           )}
+
+          {/* Capsule controls - when item is already in cart */}
+          {!isPending && isAvailableInPincode && !isOutOfStock && cartQuantity > 0 && (
+            <View style={styles.capsuleContainer}>
+              <Text style={styles.quantityLabel}>Quantity in Cart</Text>
+              <QuantityCapsule
+                quantity={cartQuantity}
+                onIncrement={handleIncrementQuantity}
+                onDecrement={handleDecrementQuantity}
+                size="md"
+              />
+            </View>
+          )}
         </View>
       </ScrollView>
 
-      {/* Add to Cart button - fixed bottom bar */}
-      {!isPending && (
+      {/* Add to Cart button - only show when item NOT in cart */}
+      {!isPending && cartQuantity === 0 && (
         <View style={styles.bottomAction}>
           <Button
             title={isAvailableInPincode ? "Add to Cart" : "Not Available in Your Area"}
@@ -422,5 +462,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#eee',
+  },
+  capsuleContainer: {
+    marginTop: 24,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  cartQuantityInfo: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#E3F2FD',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#007AFF',
+  },
+  cartQuantityText: {
+    fontSize: 14,
+    color: '#1565C0',
+    fontWeight: '500',
   },
 });

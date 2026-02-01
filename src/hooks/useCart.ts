@@ -86,6 +86,18 @@ export function useCart() {
     return sum + (calculateItemPrice(cartItem) * cartItem.quantity);
   }, 0);
 
+  // Get quantity for a specific item in cart
+  const getItemQuantity = useCallback((itemId: string): number => {
+    const cartItem = cartItems.find(ci => ci.item_id === itemId);
+    return cartItem?.quantity || 0;
+  }, [cartItems]);
+
+  // Get cart item ID for a specific item
+  const getCartItemId = useCallback((itemId: string): string | undefined => {
+    const cartItem = cartItems.find(ci => ci.item_id === itemId);
+    return cartItem?.id;
+  }, [cartItems]);
+
   return {
     cartItems,
     cartCount,
@@ -98,5 +110,7 @@ export function useCart() {
     refetch: loadCart,
     subtotal,
     calculateItemPrice,
+    getItemQuantity,
+    getCartItemId,
   };
 }

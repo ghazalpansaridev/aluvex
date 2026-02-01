@@ -16,13 +16,16 @@ import {
   getStockStatus,
 } from '../../lib/utils';
 import { PriceDisplay } from './PriceDisplay';
+import { QuantityCapsule } from './QuantityCapsule';
 
 interface ProductCardProps {
   item: ItemWithDetails;
   onPress: () => void;
   showMrpOnly?: boolean;
-  onAddToCart?: () => void;
-  showAddToCart?: boolean;
+  cartQuantity?: number;
+  onIncrementQuantity?: () => void;
+  onDecrementQuantity?: () => void;
+  showQuantityControls?: boolean;
 }
 
 const { width } = Dimensions.get('window');
@@ -43,8 +46,10 @@ export function ProductCard({
   item,
   onPress,
   showMrpOnly = false,
-  onAddToCart,
-  showAddToCart = false,
+  cartQuantity,
+  onIncrementQuantity,
+  onDecrementQuantity,
+  showQuantityControls = false,
 }: ProductCardProps) {
   const categoryDiscount = item.category?.discount_percent || 0;
   const subcategoryDiscount = item.subcategory?.discount_percent;
@@ -111,17 +116,25 @@ export function ProductCard({
           size="sm"
         />
 
-        {/* Add to cart button */}
-        {showAddToCart && !isOutOfStock && onAddToCart && (
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={(e) => {
-              e.stopPropagation();
-              onAddToCart();
-            }}
-          >
-            <Text style={styles.addButtonText}>+ Add</Text>
-          </TouchableOpacity>
+        {/* Quantity controls */}
+        {showQuantityControls && !isOutOfStock && (
+          <View style={styles.quantityControlsContainer}>
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <QuantityCapsule
+                quantity={cartQuantity || 0}
+                onIncrement={() => {
+                  onIncrementQuantity?.();
+                }}
+                onDecrement={() => {
+                  onDecrementQuantity?.();
+                }}
+                size="sm"
+              />
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     </TouchableOpacity>
@@ -193,16 +206,7 @@ const styles = StyleSheet.create({
   priceContainer: {
     marginBottom: 8,
   },
-  addButton: {
+  quantityControlsContainer: {
     marginTop: 8,
-    backgroundColor: '#007AFF',
-    paddingVertical: 8,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
   },
 });
