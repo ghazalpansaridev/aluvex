@@ -92,7 +92,8 @@ export default function ProductDetailScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <View style={styles.container}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Image gallery */}
         <View style={styles.imageContainer}>
           <Image
@@ -192,8 +193,45 @@ export default function ProductDetailScreen() {
               <Text style={styles.description}>{item.description}</Text>
             </View>
           )}
+
+          {/* Quantity selector - only for approved retailers */}
+          {!isPending && isAvailableInPincode && !isOutOfStock && (
+            <View style={styles.quantityContainer}>
+              <Text style={styles.quantityLabel}>Quantity</Text>
+              <View style={styles.quantityControls}>
+                <TouchableOpacity
+                  style={styles.quantityButton}
+                  onPress={() => setQuantity(Math.max(1, quantity - 1))}
+                  disabled={quantity <= 1}
+                >
+                  <Text style={styles.quantityButtonText}>−</Text>
+                </TouchableOpacity>
+                <Text style={styles.quantityValue}>{quantity}</Text>
+                <TouchableOpacity
+                  style={styles.quantityButton}
+                  onPress={() => setQuantity(quantity + 1)}
+                >
+                  <Text style={styles.quantityButtonText}>+</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </View>
       </ScrollView>
+
+      {/* Add to Cart button - fixed bottom bar */}
+      {!isPending && (
+        <View style={styles.bottomAction}>
+          <Button
+            title={isAvailableInPincode ? "Add to Cart" : "Not Available in Your Area"}
+            onPress={handleAddToCart}
+            disabled={!isAvailableInPincode || isOutOfStock || addingToCart}
+            loading={addingToCart}
+            variant="primary"
+          />
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -201,6 +239,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  scrollView: {
+    flex: 1,
   },
   errorContainer: {
     flex: 1,
