@@ -21,6 +21,8 @@ interface ProductCardProps {
   item: ItemWithDetails;
   onPress: () => void;
   showMrpOnly?: boolean;
+  onAddToCart?: () => void;
+  showAddToCart?: boolean;
 }
 
 const { width } = Dimensions.get('window');
@@ -41,6 +43,8 @@ export function ProductCard({
   item,
   onPress,
   showMrpOnly = false,
+  onAddToCart,
+  showAddToCart = false,
 }: ProductCardProps) {
   const categoryDiscount = item.category?.discount_percent || 0;
   const subcategoryDiscount = item.subcategory?.discount_percent;
@@ -106,6 +110,19 @@ export function ProductCard({
           variant={stockStatus.variant}
           size="sm"
         />
+
+        {/* Add to cart button */}
+        {showAddToCart && !isOutOfStock && onAddToCart && (
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={(e) => {
+              e.stopPropagation();
+              onAddToCart();
+            }}
+          >
+            <Text style={styles.addButtonText}>+ Add</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -175,5 +192,17 @@ const styles = StyleSheet.create({
   },
   priceContainer: {
     marginBottom: 8,
+  },
+  addButton: {
+    marginTop: 8,
+    backgroundColor: '#007AFF',
+    paddingVertical: 8,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

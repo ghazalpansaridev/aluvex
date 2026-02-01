@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../../lib/auth-context';
 import { useItems } from '../../../hooks/useItems';
 import { useCategories } from '../../../hooks/useCategories';
+import { useCart } from '../../../hooks/useCart';
 import { LoadingSpinner, EmptyState } from '../../../components/ui';
 import {
   ProductCard,
@@ -27,6 +28,7 @@ import { ItemFilters } from '../../../lib/items.api';
 export default function RetailerCatalogScreen() {
   const router = useRouter();
   const { retailer, retailerStatus } = useAuth();
+  const { addItem } = useCart();
 
   // Filters state
   const [filters, setFilters] = useState<ItemFilters>({
@@ -60,15 +62,32 @@ export default function RetailerCatalogScreen() {
     router.push(`/(retailer)/catalog/${itemId}`);
   };
 
+  const handleAddToCart = async (item: any) => {
+    // Check if item available in retailer's pincode
+    if (retailer?.pincode && !item.available_pincodes.includes(retailer.pincode)) {
+      console.error('Item unavailable at your location');
+      return;
+    }
+    
+    try {
+      await addItem(item.id, 1);
+      console.log('Added to cart successfully');
+    } catch (err: any) {
+      console.error('Failed to add to cart:', err.message);
+    }
+  };
+
   const renderItem = useCallback(
     ({ item }: { item: any }) => (
       <ProductCard
         item={item}
         onPress={() => handleProductPress(item.id)}
         showMrpOnly={isPending}
+        onAddToCart={() => handleAddToCart(item)}
+        showAddToCart={!isPending}
       />
     ),
-    [isPending]
+    [isPending, retailer?.pincode]
   );
 
   const renderEmptyComponent = () => {

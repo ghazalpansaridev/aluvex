@@ -1,10 +1,12 @@
 import { Tabs, Redirect } from 'expo-router';
 import { Text } from 'react-native';
 import { useAuth } from '../../lib/auth-context';
+import { useCart } from '../../hooks/useCart';
 import { LoadingSpinner } from '../../components/ui';
 
 export default function RetailerLayout() {
   const { role, retailerStatus, loading } = useAuth();
+  const { cartCount } = useCart();
 
   if (loading) {
     return <LoadingSpinner fullScreen />;
@@ -35,6 +37,7 @@ export default function RetailerLayout() {
         name="cart"
         options={{
           title: 'Cart',
+          tabBarBadge: cartCount > 0 ? cartCount : undefined,
           tabBarIcon: ({ color }) => <TabIcon name="cart" color={color} />,
         }}
       />

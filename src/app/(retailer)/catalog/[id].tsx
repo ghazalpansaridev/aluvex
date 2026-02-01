@@ -11,6 +11,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../../lib/auth-context';
 import { useItem } from '../../../hooks/useItems';
+import { useCart } from '../../../hooks/useCart';
 import { LoadingSpinner, Button, Badge } from '../../../components/ui';
 import { PriceDisplay } from '../../../components/catalog';
 import { getPrimaryImage, getStockStatus, formatDiscount, calculateDiscountedPrice } from '../../../lib/utils';
@@ -27,10 +28,13 @@ const { width } = Dimensions.get('window');
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { retailerStatus } = useAuth();
+  const { retailer, retailerStatus } = useAuth();
   const { item, loading, error } = useItem(id);
+  const { addItem } = useCart();
 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+  const [addingToCart, setAddingToCart] = useState(false);
 
   const isPending = retailerStatus === 'pending';
 
@@ -63,6 +67,29 @@ export default function ProductDetailScreen() {
   const discountPercent = subcategoryDiscount && subcategoryDiscount > 0 
     ? subcategoryDiscount 
     : categoryDiscount;
+  
+  // Check if item is available in retailer's pincode
+  const isAvailableInPincode = retailer?.pincode 
+    ? item.available_pincodes.includes(retailer.pincode)
+    : false;
+
+  const handleAddToCart = async () => {
+    if (!isAvailableInPincode) {
+      console.error('Item unavailable at your location');
+      return;
+    }
+
+    try {
+      setAddingToCart(true);
+      await addItem(item.id, quantity);
+      console.log(`Added ${quantity} item(s) to cart successfully`);
+      setQuantity(1); // Reset quantity after adding
+    } catch (err: any) {
+      console.error('Failed to add to cart:', err.message);
+    } finally {
+      setAddingToCart(false);
+    }
+  };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -308,5 +335,51 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     lineHeight: 22,
+  },
+  quantityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 24,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  quantityLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  quantityControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  quantityButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityButtonText: {
+    fontSize: 20,
+    color: '#333',
+    fontWeight: '600',
+  },
+  quantityValue: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    minWidth: 40,
+    textAlign: 'center',
+  },
+  bottomAction: {
+    padding: 16,
+    paddingBottom: 32,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
   },
 });
