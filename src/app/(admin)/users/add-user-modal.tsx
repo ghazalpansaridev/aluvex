@@ -432,7 +432,7 @@ export function AddUserModal({ visible, onClose, onSuccess }: AddUserModalProps)
           <Text style={styles.reviewValue}>
             {formData.role === 'admin'
               ? 'Admin'
-              : formData.role === 'ops'
+              : formData.role === 'operations'
               ? 'Operations'
               : 'Sales'}
           </Text>

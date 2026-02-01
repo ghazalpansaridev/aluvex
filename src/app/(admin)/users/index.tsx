@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
+  Modal,
+  ScrollView,
 } from 'react-native';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
@@ -25,6 +27,9 @@ export default function AdminUsersScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<StaffUser | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [menuVisible, setMenuVisible] = useState<string | null>(null);
   
   // Filters
   const [roleFilter, setRoleFilter] = useState<string>('');
@@ -41,22 +46,11 @@ export default function AdminUsersScreen() {
     try {
       setLoading(true);
       
-      // Query staff_users table
-      // Note: We can't directly join auth.users, so we'll fetch email separately
-      let query = supabase
-        .from('staff_users')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      // Apply filters
-      if (roleFilter) {
-        query = query.eq('role', roleFilter);
-      }
-      if (statusFilter) {
-        query = query.eq('status', statusFilter);
-      }
-
-      const { data, error } = await query;
+      // Use RPC function to fetch staff users with emails from auth.users
+      const { data, error } = await supabase.rpc('get_staff_users_with_email', {
+        p_role: roleFilter || null,
+        p_status: statusFilter || null,
+      });
 
       if (error) {
         console.error('Error loading users:', error);
@@ -64,16 +58,7 @@ export default function AdminUsersScreen() {
         return;
       }
 
-      // Fetch email addresses from auth.users via Edge Function or RPC
-      // For now, we'll use the user_id to fetch email if needed
-      // In production, you might want to create an RPC function that joins both tables
-      const transformedUsers = (data || []).map((user: any) => ({
-        ...user,
-        email: '', // Will be populated if we add RPC function
-        last_login: null, // Will be populated if we add RPC function
-      }));
-
-      setUsers(transformedUsers);
+      setUsers(data || []);
     } catch (error) {
       console.error('Error in loadUsers:', error);
       Alert.alert('Error', 'Failed to load users');
@@ -90,6 +75,73 @@ export default function AdminUsersScreen() {
 
   const handleAddSuccess = () => {
     loadUsers();
+  };
+
+  const handleShowDetails = (user: StaffUser) => {
+    setSelectedUser(user);
+    setShowDetailsModal(true);
+  };
+
+  const handleEditUser = (user: StaffUser) => {
+    setMenuVisible(null);
+    // TODO: Implement edit user modal
+    Alert.alert('Edit User', `Edit functionality for ${user.first_name} ${user.last_name} will be implemented soon.`);
+  };
+
+  const handleDeleteUser = (user: StaffUser) => {
+    setMenuVisible(null);
+    Alert.alert(
+      'Delete User',
+      `Are you sure you want to delete ${user.first_name} ${user.last_name}?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Call edge function to delete user
+              const { data: { session: currentSession } } = await supabase.auth.getSession();
+              if (!currentSession?.access_token) {
+                Alert.alert('Error', 'Not authenticated');
+                return;
+              }
+
+              const response = await fetch(
+                `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/delete-user`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${currentSession.access_token}`,
+                  },
+                  body: JSON.stringify({ email: user.email }),
+                }
+              );
+
+              const result = await response.json();
+
+              if (!response.ok || !result.success) {
+                throw new Error(result.error || 'Failed to delete user');
+              }
+
+              Alert.alert('Success', 'User deleted successfully');
+              loadUsers(); // Reload the list
+            } catch (error) {
+              console.error('Error deleting user:', error);
+              Alert.alert('Error', error instanceof Error ? error.message : 'Failed to delete user');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const toggleMenu = (userId: string) => {
+    setMenuVisible(menuVisible === userId ? null : userId);
   };
 
   // Filter users by search query
@@ -130,6 +182,19 @@ export default function AdminUsersScreen() {
     }
   };
 
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending_password':
+        return 'Pending Password';
+      case 'active':
+        return 'Active';
+      case 'inactive':
+        return 'Inactive';
+      default:
+        return status;
+    }
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Never';
     const date = new Date(dateString);
@@ -137,54 +202,92 @@ export default function AdminUsersScreen() {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
   const renderUserItem = ({ item }: { item: StaffUser }) => (
-    <TouchableOpacity style={styles.userCard}>
-      <View style={styles.userCardHeader}>
-        <View style={styles.userInfo}>
+    <View style={styles.userRow}>
+      <View style={styles.userRowContent}>
+        {/* Name */}
+        <View style={styles.nameColumn}>
           <Text style={styles.userName}>
             {item.first_name} {item.last_name}
           </Text>
-          <Text style={styles.userEmail}>{item.email || 'No email'}</Text>
         </View>
-        <View style={styles.badges}>
+
+        {/* Email */}
+        <View style={styles.emailColumn}>
+          <Text style={styles.userEmail} numberOfLines={1}>
+            {item.email || 'No email'}
+          </Text>
+        </View>
+
+        {/* Role Badge */}
+        <View style={styles.badgeColumn}>
           <Badge
             label={getRoleLabel(item.role)}
             variant="info"
             size="sm"
           />
+        </View>
+
+        {/* Status Badge */}
+        <View style={styles.badgeColumn}>
           <Badge
-            label={
-              item.status === 'pending_password'
-                ? 'Pending Password'
-                : item.status === 'active'
-                ? 'Active'
-                : 'Inactive'
-            }
+            label={getStatusLabel(item.status)}
             variant={getStatusBadgeVariant(item.status)}
             size="sm"
           />
         </View>
-      </View>
-      <View style={styles.userCardDetails}>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Phone:</Text>
-          <Text style={styles.detailValue}>{item.phone}</Text>
+
+        {/* Details Button */}
+        <View style={styles.actionColumn}>
+          <TouchableOpacity
+            style={styles.detailsButton}
+            onPress={() => handleShowDetails(item)}
+          >
+            <Text style={styles.detailsButtonText}>Details</Text>
+          </TouchableOpacity>
         </View>
-        {item.role === 'sales' && item.region && (
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Region:</Text>
-            <Text style={styles.detailValue}>{item.region}</Text>
-          </View>
-        )}
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Last Login:</Text>
-          <Text style={styles.detailValue}>{formatDate(item.last_login || null)}</Text>
+
+        {/* Three-dot Menu */}
+        <View style={styles.menuColumn}>
+          <TouchableOpacity
+            style={styles.menuButton}
+            onPress={() => toggleMenu(item.id)}
+          >
+            <Text style={styles.menuIcon}>⋮</Text>
+          </TouchableOpacity>
+
+          {/* Dropdown Menu */}
+          {menuVisible === item.id && (
+            <>
+              <TouchableOpacity
+                style={styles.menuOverlay}
+                onPress={() => setMenuVisible(null)}
+              />
+              <View style={styles.menuDropdown}>
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => handleEditUser(item)}
+                >
+                  <Text style={styles.menuItemText}>✏️ Edit</Text>
+                </TouchableOpacity>
+                <View style={styles.menuDivider} />
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => handleDeleteUser(item)}
+                >
+                  <Text style={[styles.menuItemText, styles.menuItemDanger]}>🗑️ Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
         </View>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 
   if (loading && users.length === 0) {
@@ -241,6 +344,28 @@ export default function AdminUsersScreen() {
         </View>
       </View>
 
+      {/* Table Header */}
+      <View style={styles.tableHeader}>
+        <View style={styles.nameColumn}>
+          <Text style={styles.tableHeaderText}>Name</Text>
+        </View>
+        <View style={styles.emailColumn}>
+          <Text style={styles.tableHeaderText}>Email</Text>
+        </View>
+        <View style={styles.badgeColumn}>
+          <Text style={styles.tableHeaderText}>Role</Text>
+        </View>
+        <View style={styles.badgeColumn}>
+          <Text style={styles.tableHeaderText}>Status</Text>
+        </View>
+        <View style={styles.actionColumn}>
+          <Text style={styles.tableHeaderText}>Action</Text>
+        </View>
+        <View style={styles.menuColumn}>
+          <Text style={styles.tableHeaderText}></Text>
+        </View>
+      </View>
+
       <FlatList
         data={filteredUsers}
         renderItem={renderUserItem}
@@ -263,6 +388,125 @@ export default function AdminUsersScreen() {
           />
         }
       />
+
+      {/* User Details Modal */}
+      <Modal
+        visible={showDetailsModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowDetailsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>User Details</Text>
+              <TouchableOpacity onPress={() => setShowDetailsModal(false)}>
+                <Text style={styles.closeButton}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {selectedUser && (
+              <ScrollView style={styles.modalBody}>
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailSectionTitle}>Personal Information</Text>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Full Name:</Text>
+                    <Text style={styles.detailValue}>
+                      {selectedUser.first_name} {selectedUser.last_name}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Email:</Text>
+                    <Text style={styles.detailValue}>
+                      {selectedUser.email || 'N/A'}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Phone:</Text>
+                    <Text style={styles.detailValue}>{selectedUser.phone}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailSectionTitle}>Role & Status</Text>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Role:</Text>
+                    <Text style={styles.detailValue}>
+                      {getRoleLabel(selectedUser.role)}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Status:</Text>
+                    <Text style={styles.detailValue}>
+                      {getStatusLabel(selectedUser.status)}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Last Login:</Text>
+                    <Text style={styles.detailValue}>
+                      {formatDate(selectedUser.last_login || null)}
+                    </Text>
+                  </View>
+                </View>
+
+                {selectedUser.role === 'sales' && (
+                  <View style={styles.detailSection}>
+                    <Text style={styles.detailSectionTitle}>Sales Information</Text>
+                    {selectedUser.region && (
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>Region:</Text>
+                        <Text style={styles.detailValue}>{selectedUser.region}</Text>
+                      </View>
+                    )}
+                    {selectedUser.pincode && (
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>Pincode:</Text>
+                        <Text style={styles.detailValue}>{selectedUser.pincode}</Text>
+                      </View>
+                    )}
+                    {selectedUser.address && (
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>Address:</Text>
+                        <Text style={styles.detailValue}>{selectedUser.address}</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailSectionTitle}>Account Information</Text>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>User ID:</Text>
+                    <Text style={[styles.detailValue, styles.monoText]}>
+                      {selectedUser.user_id}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Created:</Text>
+                    <Text style={styles.detailValue}>
+                      {formatDate(selectedUser.created_at)}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Updated:</Text>
+                    <Text style={styles.detailValue}>
+                      {formatDate(selectedUser.updated_at)}
+                    </Text>
+                  </View>
+                </View>
+              </ScrollView>
+            )}
+
+            <View style={styles.modalFooter}>
+              <Button
+                title="Close"
+                onPress={() => setShowDetailsModal(false)}
+                variant="secondary"
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <AddUserModal
         visible={showAddModal}
@@ -307,61 +551,194 @@ const styles = StyleSheet.create({
     flex: 1,
     marginBottom: 0,
   },
+  tableHeader: {
+    flexDirection: 'row',
+    padding: 12,
+    backgroundColor: '#f5f5f5',
+    borderBottomWidth: 2,
+    borderBottomColor: '#ddd',
+  },
+  tableHeaderText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+    textTransform: 'uppercase',
+  },
   listContainer: {
-    padding: 16,
+    paddingBottom: 16,
   },
   emptyContainer: {
     flex: 1,
   },
-  userCard: {
-    backgroundColor: '#f9f9f9',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#eee',
+  userRow: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    backgroundColor: '#fff',
   },
-  userCardHeader: {
+  userRowContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    padding: 12,
+    alignItems: 'center',
   },
-  userInfo: {
+  nameColumn: {
+    flex: 2,
+    paddingRight: 8,
+  },
+  emailColumn: {
+    flex: 2.5,
+    paddingRight: 8,
+  },
+  badgeColumn: {
+    flex: 1.5,
+    paddingRight: 8,
+  },
+  actionColumn: {
     flex: 1,
+    alignItems: 'flex-end',
+  },
+  menuColumn: {
+    width: 40,
+    alignItems: 'center',
+    position: 'relative',
   },
   userName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 4,
   },
   userEmail: {
     fontSize: 14,
     color: '#666',
   },
-  badges: {
-    flexDirection: 'row',
-    gap: 8,
+  detailsButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
   },
-  userCardDetails: {
-    marginTop: 8,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
+  detailsButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  menuButton: {
+    padding: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuIcon: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#666',
+  },
+  menuOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 998,
+  },
+  menuDropdown: {
+    position: 'absolute',
+    top: 35,
+    right: 0,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 5,
+    minWidth: 120,
+    zIndex: 999,
+  },
+  menuItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  menuItemText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  menuItemDanger: {
+    color: '#dc3545',
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: '#eee',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    width: '90%',
+    maxWidth: 600,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  closeButton: {
+    fontSize: 24,
+    color: '#666',
+    paddingHorizontal: 8,
+  },
+  modalBody: {
+    padding: 16,
+  },
+  detailSection: {
+    marginBottom: 24,
+  },
+  detailSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    paddingBottom: 8,
   },
   detailRow: {
     flexDirection: 'row',
-    marginBottom: 6,
+    marginBottom: 12,
   },
   detailLabel: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#666',
-    width: 80,
+    width: 120,
+    fontWeight: '500',
   },
   detailValue: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#333',
     flex: 1,
+  },
+  monoText: {
+    fontFamily: 'monospace',
+    fontSize: 12,
+  },
+  modalFooter: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
   },
 });

@@ -147,18 +147,22 @@ export default function SetPasswordScreen() {
         throw updateError;
       }
 
-      // Update staff_users status to 'active'
+      // Note: The status is automatically updated to 'active' via database trigger
+      // when the password is set. The trigger fires on auth.users password update.
+      
+      // Wait a moment for the trigger to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Verify the status was updated (optional, for confirmation)
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { error: statusError } = await supabase
+        const { data: staffUser } = await supabase
           .from('staff_users')
-          .update({ status: 'active' })
-          .eq('user_id', user.id);
+          .select('status')
+          .eq('user_id', user.id)
+          .single();
 
-        if (statusError) {
-          console.error('Error updating staff user status:', statusError);
-          // Don't fail the whole flow if this fails
-        }
+        console.log('Staff user status after password set:', staffUser?.status);
       }
 
       Alert.alert(
