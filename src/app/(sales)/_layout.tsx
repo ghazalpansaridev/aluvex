@@ -23,7 +23,10 @@ export default function SalesLayout() {
     >
       <Tabs.Screen
         name="catalog"
-        options={{ title: 'Catalog' }}
+        options={{ 
+          title: 'Catalog',
+          headerShown: false,
+        }}
       />
       <Tabs.Screen
         name="retailers"

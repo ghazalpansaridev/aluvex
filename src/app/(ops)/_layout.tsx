@@ -22,6 +22,14 @@ export default function OpsLayout() {
       }}
     >
       <Tabs.Screen
+        name="catalog"
+        options={{ 
+          title: 'Catalog',
+          tabBarLabel: 'Catalog',
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
         name="items"
         options={{ 
           title: 'Items',

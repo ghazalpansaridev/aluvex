@@ -39,13 +39,10 @@ export default function Index() {
   // Route all authenticated users to catalog as home page
   switch (role) {
     case 'admin':
-      // Admin users go to Items tab in Ops layout
-      return <Redirect href="/(ops)/items" />;
+      return <Redirect href="/(admin)/catalog" />;
     case 'operations':
-      // Operations users go to Items tab in Ops layout
-      return <Redirect href="/(ops)/items" />;
+      return <Redirect href="/(ops)/catalog" />;
     case 'sales':
-      // Sales users go to sales catalog
       return <Redirect href="/(sales)/catalog" />;
     case 'retailer':
       // Check retailer status
@@ -56,10 +53,8 @@ export default function Index() {
         return <Redirect href="/(auth)/rejected" />;
       }
       if (!retailerStatus) {
-        // New signup, needs to complete registration
         return <Redirect href="/(auth)/register" />;
       }
-      // Retailer users go to retailer catalog
       return <Redirect href="/(retailer)/catalog" />;
     default:
       return <Redirect href="/(auth)/login" />;
