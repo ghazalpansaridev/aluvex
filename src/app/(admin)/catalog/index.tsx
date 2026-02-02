@@ -4,23 +4,26 @@ import {
   StyleSheet,
   FlatList,
   RefreshControl,
-  TouchableOpacity,
-  Text,
 } from 'react-native';
-import { useRouter, useNavigation } from 'expo-router';
-import { useItems } from '../hooks/useItems';
-import { useCategories } from '../hooks/useCategories';
-import { LoadingSpinner, EmptyState } from '../components/ui';
+import { useRouter } from 'expo-router';
+import { useItems } from '../../../hooks/useItems';
+import { useCategories } from '../../../hooks/useCategories';
+import { LoadingSpinner, EmptyState } from '../../../components/ui';
 import {
   ProductCard,
   CategoryFilter,
   SearchBar,
-} from '../components/catalog';
-import { ItemFilters } from '../lib/items.api';
+} from '../../../components/catalog';
+import { ItemFilters } from '../../../lib/items.api';
 
-export default function GuestCatalogPage() {
+/**
+ * Admin Catalog Screen
+ * Displays items in a 2-column grid with filtering capabilities
+ * - Admin users can view all products
+ * - No cart functionality (view-only for admin team)
+ */
+export default function AdminCatalogScreen() {
   const router = useRouter();
-  const navigation = useNavigation();
 
   // Filters state
   const [filters, setFilters] = useState<ItemFilters>({
@@ -35,17 +38,6 @@ export default function GuestCatalogPage() {
     search: searchQuery,
   });
 
-  // Set header with Login button
-  React.useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity onPress={handleLoginPress} style={{ marginRight: 16 }}>
-          <Text style={styles.headerButton}>Login</Text>
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation]);
-
   const handleCategorySelect = (categoryId: string | undefined) => {
     setFilters(prev => ({ ...prev, categoryId, subcategoryId: undefined }));
   };
@@ -59,12 +51,7 @@ export default function GuestCatalogPage() {
   };
 
   const handleProductPress = (itemId: string) => {
-    // Redirect to login for guests
-    router.push('/(auth)/login');
-  };
-
-  const handleLoginPress = () => {
-    router.push('/(auth)/login');
+    router.push(`/(ops)/items/${itemId}`);
   };
 
   const renderItem = useCallback(
@@ -72,9 +59,9 @@ export default function GuestCatalogPage() {
       <ProductCard
         item={item}
         onPress={() => handleProductPress(item.id)}
-        showMrpOnly={true}
+        showMrpOnly={false}
         cartQuantity={0}
-        onIncrementQuantity={() => handleLoginPress()}
+        onIncrementQuantity={() => {}}
         onDecrementQuantity={() => {}}
         showQuantityControls={false}
       />
@@ -99,18 +86,6 @@ export default function GuestCatalogPage() {
       />
     );
   };
-
-  const renderListHeader = () => (
-    <View style={styles.guestBanner}>
-      <Text style={styles.guestBannerTitle}>👋 Welcome, Guest!</Text>
-      <Text style={styles.guestBannerText}>
-        Browse our catalog. Login to place orders and access full features.
-      </Text>
-      <TouchableOpacity style={styles.loginButton} onPress={handleLoginPress}>
-        <Text style={styles.loginButtonText}>Login / Register</Text>
-      </TouchableOpacity>
-    </View>
-  );
 
   if (loading && items.length === 0) {
     return <LoadingSpinner fullScreen message="Loading catalog..." />;
@@ -159,7 +134,6 @@ export default function GuestCatalogPage() {
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        ListHeaderComponent={renderListHeader}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={refetch} />
         }
@@ -174,57 +148,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  headerButton: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  guestBanner: {
-    backgroundColor: '#4A90E2',
-    padding: 20,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    alignItems: 'center',
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  guestBannerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 8,
-  },
-  guestBannerText: {
-    fontSize: 14,
-    color: '#ffffff',
-    textAlign: 'center',
-    marginBottom: 16,
-    opacity: 0.95,
-  },
-  loginButton: {
-    backgroundColor: '#ffffff',
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  loginButtonText: {
-    color: '#4A90E2',
-    fontSize: 16,
-    fontWeight: '600',
   },
   row: {
     justifyContent: 'space-between',

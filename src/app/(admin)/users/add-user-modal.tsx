@@ -8,7 +8,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Dimensions,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Select } from '../../../components/ui/Select';
@@ -491,90 +496,100 @@ export function AddUserModal({ visible, onClose, onSuccess }: AddUserModalProps)
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      <KeyboardAvoidingView
-        style={styles.modalOverlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.header}>
-              <Text style={styles.headerTitle}>Add New User</Text>
-              <Button
-                title="✕"
-                onPress={handleClose}
-                variant="ghost"
-                size="sm"
-                style={styles.closeButton}
-              />
-            </View>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView
+            style={styles.keyboardAvoidingView}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+          >
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <View style={styles.header}>
+                  <Text style={styles.headerTitle}>Add New User</Text>
+                  <Button
+                    title="✕"
+                    onPress={handleClose}
+                    variant="ghost"
+                    size="sm"
+                    style={styles.closeButton}
+                  />
+                </View>
 
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressStep,
-                  currentStep >= 1 && styles.progressStepActive,
-                ]}
-              />
-              <View
-                style={[
-                  styles.progressStep,
-                  currentStep >= 2 && styles.progressStepActive,
-                ]}
-              />
-              {formData.role === 'sales' && (
-                <View
-                  style={[
-                    styles.progressStep,
-                    currentStep >= 3 && styles.progressStepActive,
-                  ]}
-                />
-              )}
-              <View
-                style={[
-                  styles.progressStep,
-                  currentStep >= 4 && styles.progressStepActive,
-                ]}
-              />
-            </View>
+                <View style={styles.progressBar}>
+                  <View
+                    style={[
+                      styles.progressStep,
+                      currentStep >= 1 && styles.progressStepActive,
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.progressStep,
+                      currentStep >= 2 && styles.progressStepActive,
+                    ]}
+                  />
+                  {formData.role === 'sales' && (
+                    <View
+                      style={[
+                        styles.progressStep,
+                        currentStep >= 3 && styles.progressStepActive,
+                      ]}
+                    />
+                  )}
+                  <View
+                    style={[
+                      styles.progressStep,
+                      currentStep >= 4 && styles.progressStepActive,
+                    ]}
+                  />
+                </View>
 
-            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-              {currentStep === 1 && renderStep1()}
-              {currentStep === 2 && renderStep2()}
-              {currentStep === 3 && renderStep3()}
-              {currentStep === 4 && renderStep4()}
-            </ScrollView>
+                <ScrollView 
+                  style={styles.scrollView} 
+                  contentContainerStyle={styles.scrollViewContent}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {currentStep === 1 && renderStep1()}
+                  {currentStep === 2 && renderStep2()}
+                  {currentStep === 3 && renderStep3()}
+                  {currentStep === 4 && renderStep4()}
+                </ScrollView>
 
-            <View style={styles.footer}>
-              {currentStep > 1 && (
-                <Button
-                  title="Back"
-                  onPress={handleBack}
-                  variant="outline"
-                  style={styles.backButton}
-                />
-              )}
-              <View style={styles.spacer} />
-              {currentStep < 4 ? (
-                <Button
-                  title="Next"
-                  onPress={handleNext}
-                  disabled={
-                    (currentStep === 1 && !canProceedFromStep1()) ||
-                    (currentStep === 2 && !canProceedFromStep2()) ||
-                    (currentStep === 3 && !canProceedFromStep3())
-                  }
-                />
-              ) : (
-                <Button
-                  title="Send Invitation"
-                  onPress={handleSubmit}
-                  loading={loading}
-                />
-              )}
+                <View style={styles.footer}>
+                  {currentStep > 1 && (
+                    <Button
+                      title="Back"
+                      onPress={handleBack}
+                      variant="outline"
+                      style={styles.backButton}
+                    />
+                  )}
+                  <View style={styles.spacer} />
+                  {currentStep < 4 ? (
+                    <Button
+                      title="Next"
+                      onPress={handleNext}
+                      disabled={
+                        (currentStep === 1 && !canProceedFromStep1()) ||
+                        (currentStep === 2 && !canProceedFromStep2()) ||
+                        (currentStep === 3 && !canProceedFromStep3())
+                      }
+                    />
+                  ) : (
+                    <Button
+                      title="Send Invitation"
+                      onPress={handleSubmit}
+                      loading={loading}
+                    />
+                  )}
+                </View>
+              </View>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </View>
-      </KeyboardAvoidingView>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 }
@@ -585,25 +600,30 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
-  modalContainer: {
+  keyboardAvoidingView: {
     flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
     justifyContent: 'flex-end',
   },
   modalContent: {
     backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '90%',
-    padding: 20,
+    maxHeight: SCREEN_HEIGHT * 0.85,
+    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
     color: '#333',
   },
@@ -612,7 +632,7 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     flexDirection: 'row',
-    marginBottom: 20,
+    marginBottom: 16,
     gap: 8,
   },
   progressStep: {
@@ -625,18 +645,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#007AFF',
   },
   scrollView: {
-    flex: 1,
+    maxHeight: SCREEN_HEIGHT * 0.5,
+  },
+  scrollViewContent: {
+    paddingBottom: 20,
   },
   stepTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   stepDescription: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   checkingText: {
     fontSize: 12,
@@ -688,10 +711,11 @@ const styles = StyleSheet.create({
   },
   footer: {
     flexDirection: 'row',
-    marginTop: 20,
-    paddingTop: 20,
+    marginTop: 16,
+    paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: '#eee',
+    paddingBottom: Platform.OS === 'ios' ? 20 : 10,
   },
   backButton: {
     flex: 1,

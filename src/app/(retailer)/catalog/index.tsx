@@ -143,10 +143,8 @@ export default function RetailerCatalogScreen() {
           title="Error loading catalog"
           description={error}
           icon="❌"
-          action={{
-            label: 'Retry',
-            onPress: refetch,
-          }}
+          actionLabel="Retry"
+          onAction={refetch}
         />
       </View>
     );

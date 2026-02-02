@@ -58,6 +58,19 @@ export default function RootLayout() {
             <Stack.Screen name="(ops)" />
             <Stack.Screen name="(admin)" />
             <Stack.Screen name="(sales)" />
+            <Stack.Screen 
+              name="catalog-guest" 
+              options={{ 
+                title: 'Catalog',
+                headerShown: true,
+              }} 
+            />
+            <Stack.Screen 
+              name="categories" 
+              options={{ 
+                headerShown: true,
+              }} 
+            />
           </Stack>
         </GlobalDrawer>
       </DrawerProvider>

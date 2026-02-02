@@ -3,7 +3,7 @@
 export type UserRole = 'admin' | 'operations' | 'sales' | 'retailer';
 export type RetailerStatus = 'pending' | 'approved' | 'rejected';
 export type BusinessType = 'Trader' | 'Fabricator' | 'Builder' | 'Architect' | 'Other';
-export type OrderStatus = 'placed' | 'partially_shipped' | 'shipped' | 'cancelled';
+export type OrderStatus = 'placed' | 'processing' | 'partially_shipped' | 'shipped' | 'cancelled';
 export type ItemStatus = 'active' | 'inactive' | 'draft';
 export type CategoryStatus = 'active' | 'inactive';
 export type StaffUserStatus = 'pending_password' | 'active' | 'inactive';
@@ -205,6 +205,35 @@ export interface StaffUser {
   // Joined from auth.users
   email?: string;
   last_login?: string;
+}
+
+// Extended Order types for admin/ops views
+export interface OrderWithRetailer extends Order {
+  retailer: Retailer;
+  items: OrderItem[];
+}
+
+export interface OrderDetailsResponse extends Order {
+  retailer: Retailer;
+  items: OrderItemWithShipments[];
+  shipments: ShipmentWithItems[];
+}
+
+export interface OrderItemWithShipments extends OrderItem {
+  remaining_quantity: number; // calculated: quantity - shipped_quantity
+  shipment_items: ShipmentItem[];
+}
+
+export interface ShipmentWithItems extends Shipment {
+  items: ShipmentItem[];
+}
+
+export interface OrderFilters {
+  status?: OrderStatus;
+  dateRange?: { start: string; end: string };
+  retailerId?: string;
+  pincode?: string;
+  searchQuery?: string;
 }
 
 // Auth context types

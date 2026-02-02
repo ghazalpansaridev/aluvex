@@ -22,6 +22,13 @@ export default function AdminLayout() {
       }}
     >
       <Tabs.Screen
+        name="catalog"
+        options={{ 
+          title: 'Catalog',
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
         name="dashboard"
         options={{ title: 'Dashboard' }}
       />

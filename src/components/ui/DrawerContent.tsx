@@ -83,9 +83,15 @@ export const DrawerContent: React.FC<DrawerContentProps> = ({ onClose }) => {
             } else if (role === 'sales') {
               // Sales - go to sales catalog
               handleNavigation('/(sales)/catalog');
+            } else if (role === 'admin') {
+              // Admin - go to admin catalog
+              handleNavigation('/(admin)/catalog');
+            } else if (role === 'operations') {
+              // Operations - go to ops catalog
+              handleNavigation('/(ops)/catalog');
             } else {
-              // Other logged-in users - go to standard catalog
-              handleNavigation('/categories');
+              // Fallback - go to guest catalog
+              handleNavigation('/catalog-guest');
             }
           }}
         >

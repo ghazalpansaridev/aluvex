@@ -86,3 +86,115 @@ export function debounce<T extends (...args: any[]) => any>(
     timeout = setTimeout(() => func(...args), wait);
   };
 }
+
+/**
+ * Generate shipment number in format: SHP-YYYYMMDD-XXXXX
+ */
+export function generateShipmentNumber(): string {
+  const today = new Date();
+  const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+  const randomNum = Math.floor(Math.random() * 99999) + 1;
+  return `SHP-${dateStr}-${randomNum.toString().padStart(5, '0')}`;
+}
+
+/**
+ * Generate invoice number in format: INV-YYYYMMDD-XXXXX
+ */
+export function generateInvoiceNumber(): string {
+  const today = new Date();
+  const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+  const randomNum = Math.floor(Math.random() * 99999) + 1;
+  return `INV-${dateStr}-${randomNum.toString().padStart(5, '0')}`;
+}
+
+/**
+ * Calculate order status based on order items
+ * Rules:
+ * - Placed: No shipments (all shipped_quantity = 0)
+ * - Processing: Admin acknowledged, no shipments yet
+ * - Partially Shipped: Some items shipped but not all
+ * - Shipped: All items fully shipped (quantity = shipped_quantity for all)
+ */
+export function calculateOrderStatus(
+  orderItems: Array<{ quantity: number; shipped_quantity: number }>,
+  currentStatus?: 'placed' | 'processing' | 'partially_shipped' | 'shipped' | 'cancelled'
+): 'placed' | 'processing' | 'partially_shipped' | 'shipped' {
+  // If currently processing and no shipments yet, keep as processing
+  if (currentStatus === 'processing') {
+    const hasShipments = orderItems.some(item => item.shipped_quantity > 0);
+    if (!hasShipments) return 'processing';
+  }
+
+  const allUnshipped = orderItems.every(item => item.shipped_quantity === 0);
+  if (allUnshipped) return currentStatus === 'processing' ? 'processing' : 'placed';
+
+  const allShipped = orderItems.every(
+    item => item.shipped_quantity === item.quantity
+  );
+  if (allShipped) return 'shipped';
+
+  return 'partially_shipped';
+}
+
+/**
+ * Format date range for filtering
+ * @param range - 'last_week' | 'last_month' | 'last_3_months' | 'custom'
+ * @returns Object with start and end dates
+ */
+export function formatDateRange(range: string): { start: Date; end: Date } {
+  const end = new Date();
+  const start = new Date();
+
+  switch (range) {
+    case 'last_week':
+      start.setDate(start.getDate() - 7);
+      break;
+    case 'last_month':
+      start.setMonth(start.getMonth() - 1);
+      break;
+    case 'last_3_months':
+      start.setMonth(start.getMonth() - 3);
+      break;
+    default:
+      // Default to last week
+      start.setDate(start.getDate() - 7);
+  }
+
+  return { start, end };
+}
+
+/**
+ * Validate shipment quantities against order items
+ * Ensures quantities don't exceed remaining quantities
+ */
+export function validateShipmentQuantities(
+  orderItems: Array<{ id: string; quantity: number; shipped_quantity: number }>,
+  shipmentItems: Array<{ orderItemId: string; quantity: number }>
+): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  for (const shipmentItem of shipmentItems) {
+    const orderItem = orderItems.find(oi => oi.id === shipmentItem.orderItemId);
+    
+    if (!orderItem) {
+      errors.push(`Order item ${shipmentItem.orderItemId} not found`);
+      continue;
+    }
+
+    const remaining = orderItem.quantity - orderItem.shipped_quantity;
+    if (shipmentItem.quantity > remaining) {
+      errors.push(
+        `Cannot ship ${shipmentItem.quantity} units - only ${remaining} remaining`
+      );
+    }
+
+    if (shipmentItem.quantity <= 0) {
+      errors.push(`Shipment quantity must be greater than 0`);
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}

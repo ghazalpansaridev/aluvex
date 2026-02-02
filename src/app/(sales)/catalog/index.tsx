@@ -1,120 +1,137 @@
-import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  RefreshControl,
+} from 'react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '../../../lib/supabase';
-
-interface Subcategory {
-  id: string;
-  name: string;
-  description?: string;
-  image_url?: string;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  description?: string;
-  image_url?: string;
-  created_at: string;
-  subcategories?: Subcategory[];
-}
+import { useItems } from '../../../hooks/useItems';
+import { useCategories } from '../../../hooks/useCategories';
+import { LoadingSpinner, EmptyState } from '../../../components/ui';
+import {
+  ProductCard,
+  CategoryFilter,
+  SearchBar,
+} from '../../../components/catalog';
+import { ItemFilters } from '../../../lib/items.api';
 
 export default function SalesCatalogScreen() {
   const router = useRouter();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const fetchCategories = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Fetch categories with their subcategories
-      const { data, error: fetchError } = await supabase
-        .from('categories')
-        .select(`
-          *,
-          subcategories (
-            id,
-            name,
-            description,
-            image_url
-          )
-        `)
-        .order('name', { ascending: true });
+  // Filters state
+  const [filters, setFilters] = useState<ItemFilters>({
+    status: 'active',
+  });
+  const [searchQuery, setSearchQuery] = useState('');
 
-      if (fetchError) {
-        throw fetchError;
-      }
+  // Data hooks
+  const { categories, loading: categoriesLoading } = useCategories();
+  const { items, loading, error, refetch } = useItems({
+    ...filters,
+    search: searchQuery,
+  });
 
-      setCategories(data || []);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load categories');
-      console.error('Error fetching categories:', err);
-    } finally {
-      setLoading(false);
-    }
+  const handleCategorySelect = (categoryId: string | undefined) => {
+    setFilters(prev => ({ ...prev, categoryId, subcategoryId: undefined }));
   };
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const handleCategoryPress = (categoryId: string) => {
-    router.push(`/categories/${categoryId}`);
+  const handleSubcategorySelect = (subcategoryId: string | undefined) => {
+    setFilters(prev => ({ ...prev, subcategoryId }));
   };
 
-  if (loading) {
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+  };
+
+  const handleProductPress = (itemId: string) => {
+    router.push(`/(sales)/items/${itemId}`);
+  };
+
+  const renderItem = useCallback(
+    ({ item }: { item: any }) => (
+      <ProductCard
+        item={item}
+        onPress={() => handleProductPress(item.id)}
+        showMrpOnly={false}
+        cartQuantity={0}
+        onIncrementQuantity={() => {}}
+        onDecrementQuantity={() => {}}
+        showQuantityControls={false}
+      />
+    ),
+    []
+  );
+
+  const renderEmptyComponent = () => {
+    if (loading) return null;
+    
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Loading catalog...</Text>
-      </View>
+      <EmptyState
+        title="No products found"
+        description={
+          searchQuery
+            ? 'Try a different search term'
+            : filters.categoryId || filters.subcategoryId
+            ? 'No products in this category'
+            : 'No products available'
+        }
+        icon="📦"
+      />
     );
+  };
+
+  if (loading && items.length === 0) {
+    return <LoadingSpinner fullScreen message="Loading catalog..." />;
   }
 
   if (error) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Error: {error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={fetchCategories}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
+        <EmptyState
+          title="Error loading catalog"
+          description={error}
+          icon="❌"
+          actionLabel="Retry"
+          onAction={refetch}
+        />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
+      {/* Search */}
+      <SearchBar
+        value={searchQuery}
+        onSearch={handleSearch}
+        placeholder="Search products..."
+      />
+
+      {/* Category filters */}
+      {!categoriesLoading && (
+        <CategoryFilter
+          categories={categories}
+          selectedCategoryId={filters.categoryId}
+          selectedSubcategoryId={filters.subcategoryId}
+          onSelectCategory={handleCategorySelect}
+          onSelectSubcategory={handleSubcategorySelect}
+        />
+      )}
+
+      {/* Products grid */}
       <FlatList
-        data={categories}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.categoryCard}
-            onPress={() => handleCategoryPress(item.id)}
-          >
-            <View style={styles.categoryContent}>
-              <Text style={styles.categoryName}>{item.name}</Text>
-              {item.description && (
-                <Text style={styles.categoryDescription}>{item.description}</Text>
-              )}
-              {item.subcategories && item.subcategories.length > 0 && (
-                <Text style={styles.subcategoryCount}>
-                  {item.subcategories.length} subcategor{item.subcategories.length === 1 ? 'y' : 'ies'}
-                </Text>
-              )}
-            </View>
-            <Text style={styles.arrow}>→</Text>
-          </TouchableOpacity>
-        )}
-        ListEmptyComponent={
-          <View style={styles.centerContainer}>
-            <Text style={styles.emptyText}>No categories found</Text>
-          </View>
+        data={items}
+        renderItem={renderItem}
+        keyExtractor={item => item.id}
+        numColumns={2}
+        columnWrapperStyle={styles.row}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={refetch} />
         }
+        ListEmptyComponent={renderEmptyComponent}
       />
     </View>
   );
@@ -125,78 +142,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  listContainer: {
-    padding: 16,
-  },
-  categoryCard: {
-    backgroundColor: '#ffffff',
-    padding: 16,
-    marginBottom: 12,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  categoryContent: {
-    flex: 1,
-  },
-  categoryName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  categoryDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
-  },
-  subcategoryCount: {
-    fontSize: 12,
-    color: '#007AFF',
-    fontWeight: '500',
-    marginTop: 4,
-  },
-  arrow: {
-    fontSize: 20,
-    color: '#007AFF',
-    marginLeft: 12,
-  },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
   },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#666',
+  row: {
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
   },
-  errorText: {
-    fontSize: 16,
-    color: '#ff3b30',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  retryButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#999',
+  listContent: {
+    paddingTop: 16,
+    paddingBottom: 100,
   },
 });
