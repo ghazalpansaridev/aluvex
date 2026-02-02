@@ -8,3 +8,5 @@ export { EmptyState } from './EmptyState';
 export { HamburgerMenu, HamburgerIcon } from './HamburgerMenu';
 export { DrawerContent } from './DrawerContent';
 export { GlobalDrawer } from './GlobalDrawer';
+export { NotificationBellIcon } from './NotificationBellIcon';
+export { NotificationItem } from './NotificationItem';

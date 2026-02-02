@@ -19,6 +19,7 @@ import {
   validateShipmentQuantities,
 } from './utils';
 import { clearCart } from './cart.api';
+import { notificationsApi } from './notifications.api';
 
 export interface OrderWithItems extends Order {
   items: OrderItem[];
@@ -122,6 +123,40 @@ export async function createOrder(
 
   // Clear cart
   await clearCart(retailerId);
+
+  // Send notification to admin/ops users
+  try {
+    // Get retailer info
+    const { data: retailer } = await supabase
+      .from('retailers')
+      .select('business_name, user_id')
+      .eq('id', retailerId)
+      .single();
+
+    // Get all admin/ops users
+    const { data: adminOpsUsers } = await supabase
+      .from('staff_users')
+      .select('user_id')
+      .in('role', ['admin', 'operations']);
+
+    if (adminOpsUsers && adminOpsUsers.length > 0) {
+      for (const staffUser of adminOpsUsers) {
+        await notificationsApi.sendNotificationWithPush({
+          userId: staffUser.user_id,
+          type: 'new_order',
+          title: 'New Order Received',
+          body: `Order #${orderNumber} from ${retailer?.business_name || 'Retailer'}`,
+          data: {
+            related_entity_type: 'order',
+            related_entity_id: order.id,
+          },
+        });
+      }
+    }
+  } catch (notifError) {
+    // Don't fail order creation if notification fails
+    console.error('Error sending order notification:', notifError);
+  }
 
   // Return order with items
   return {
@@ -497,8 +532,38 @@ export async function createShipment(data: {
   }
 
   // TODO: Create payment debit transaction if credit limit assigned
-  // TODO: Send notification to retailer
   // TODO: Generate invoice PDF
+
+  // Send notification to retailer
+  try {
+    // Get order with retailer info
+    const { data: orderWithRetailer } = await supabase
+      .from('orders')
+      .select(`
+        id,
+        order_number,
+        retailer:retailers!orders_retailer_id_fkey(user_id)
+      `)
+      .eq('id', data.orderId)
+      .single();
+
+    if (orderWithRetailer && orderWithRetailer.retailer) {
+      const retailer = orderWithRetailer.retailer as any;
+      await notificationsApi.sendNotificationWithPush({
+        userId: retailer.user_id,
+        type: 'order_shipped',
+        title: 'Order Shipped',
+        body: `Your order #${orderWithRetailer.order_number} has been shipped`,
+        data: {
+          related_entity_type: 'shipment',
+          related_entity_id: shipment.id,
+        },
+      });
+    }
+  } catch (notifError) {
+    // Don't fail shipment creation if notification fails
+    console.error('Error sending shipment notification:', notifError);
+  }
 
   return shipment;
 }
@@ -562,7 +627,37 @@ export async function cancelOrder(
   if (cancelError) throw cancelError;
 
   // TODO: If credit limit assigned, reverse debit transaction
-  // TODO: Send notification to retailer
+
+  // Send notification to retailer
+  try {
+    // Get order with retailer info
+    const { data: orderWithRetailer } = await supabase
+      .from('orders')
+      .select(`
+        id,
+        order_number,
+        retailer:retailers!orders_retailer_id_fkey(user_id)
+      `)
+      .eq('id', orderId)
+      .single();
+
+    if (orderWithRetailer && orderWithRetailer.retailer) {
+      const retailer = orderWithRetailer.retailer as any;
+      await notificationsApi.sendNotificationWithPush({
+        userId: retailer.user_id,
+        type: 'order_cancelled',
+        title: 'Order Cancelled',
+        body: `Order #${orderWithRetailer.order_number} has been cancelled. Reason: ${reason}`,
+        data: {
+          related_entity_type: 'order',
+          related_entity_id: orderId,
+        },
+      });
+    }
+  } catch (notifError) {
+    // Don't fail cancellation if notification fails
+    console.error('Error sending cancellation notification:', notifError);
+  }
 
   return cancelledOrder;
 }

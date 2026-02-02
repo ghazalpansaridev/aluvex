@@ -2,10 +2,67 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { Platform } from 'react-native';
 import * as Linking from 'expo-linking';
-import { AuthProvider } from '../lib/auth-context';
+import { useRouter } from 'expo-router';
+import { AuthProvider, useAuth } from '../lib/auth-context';
 import { DrawerProvider } from '../lib/drawer-context';
 import { supabase } from '../lib/supabase';
 import { GlobalDrawer } from '../components/ui';
+import { pushNotifications } from '../lib/push-notifications';
+
+function PushNotificationInitializer() {
+  const { user } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (user) {
+      // Register for push notifications
+      pushNotifications.registerForPushNotifications(user.id);
+
+      // Setup handlers
+      const cleanup = pushNotifications.setupNotificationHandlers((notification) => {
+        // Handle foreground notification
+        const data = notification.request.content.data as any;
+        
+        // Navigate based on notification data
+        if (data?.related_entity_type && data?.related_entity_id) {
+          const role = user.user_metadata?.role;
+          const { related_entity_type, related_entity_id } = data;
+          
+          if (role === 'admin') {
+            if (related_entity_type === 'order') {
+              router.push(`/(admin)/orders/${related_entity_id}`);
+            } else if (related_entity_type === 'user') {
+              router.push(`/(admin)/users/${related_entity_id}`);
+            }
+          } else if (role === 'operations') {
+            if (related_entity_type === 'order') {
+              router.push(`/(ops)/orders/${related_entity_id}`);
+            } else if (related_entity_type === 'user') {
+              router.push(`/(ops)/sellers/${related_entity_id}`);
+            }
+          } else if (role === 'sales') {
+            if (related_entity_type === 'order') {
+              router.push(`/(sales)/orders/${related_entity_id}`);
+            } else if (related_entity_type === 'user') {
+              router.push(`/(sales)/retailers/${related_entity_id}`);
+            }
+          } else {
+            // Retailer
+            if (related_entity_type === 'order') {
+              router.push(`/(retailer)/orders/${related_entity_id}`);
+            } else if (related_entity_type === 'payment') {
+              router.push('/(retailer)/payments');
+            }
+          }
+        }
+      });
+
+      return cleanup;
+    }
+  }, [user, router]);
+
+  return null;
+}
 
 export default function RootLayout() {
   useEffect(() => {
@@ -49,6 +106,7 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
+      <PushNotificationInitializer />
       <DrawerProvider>
         <GlobalDrawer>
           <Stack screenOptions={{ headerShown: false }}>

@@ -245,3 +245,47 @@ export interface AuthState {
   isLoading: boolean;
   isPhoneVerified: boolean;
 }
+
+// Notification types
+export type NotificationType = 
+  | 'order_placed'
+  | 'order_shipped'
+  | 'order_cancelled'
+  | 'payment_recorded'
+  | 'credit_limit_updated'
+  | 'account_approved'
+  | 'account_rejected'
+  | 'low_stock_alert'
+  | 'new_order'
+  | 'new_retailer'
+  | 'custom';
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  body?: string;
+  data?: {
+    related_entity_type?: 'order' | 'shipment' | 'payment' | 'user' | 'item';
+    related_entity_id?: string;
+    is_push_sent?: boolean;
+    [key: string]: any; // Allow additional data
+  };
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface PushToken {
+  id: string;
+  user_id: string;
+  expo_push_token: string;
+  device_info?: {
+    deviceName?: string;
+    platform?: 'ios' | 'android';
+    osVersion?: string;
+  };
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}

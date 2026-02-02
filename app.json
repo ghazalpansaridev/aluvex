@@ -28,6 +28,13 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
+    "notification": {
+      "icon": "./assets/icon.png",
+      "color": "#007AFF",
+      "iosDisplayInForeground": true,
+      "androidMode": "default",
+      "androidCollapsedTitle": "#{unread_notifications} new notifications"
+    },
     "plugins": [
       "expo-router",
       "expo-secure-store"
