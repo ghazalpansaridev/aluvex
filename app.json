@@ -3,6 +3,7 @@
     "name": "MyApp1208",
     "scheme": "MyApp1208",
     "slug": "MyApp1208",
+    "owner": "ghazalpansari",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -17,6 +18,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.myapp1208.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
