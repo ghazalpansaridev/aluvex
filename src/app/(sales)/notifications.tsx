@@ -37,11 +37,22 @@ export default function SalesNotificationsScreen() {
   }, [filter, user]);
 
   const handleNotificationPress = async (notification: Notification) => {
+    // Optimistic update - mark as read immediately in UI
     if (!notification.is_read) {
-      await notificationsApi.markAsRead(notification.id);
-      loadNotifications();
+      setNotifications(prev => 
+        prev.map(n => n.id === notification.id ? { ...n, is_read: true } : n)
+      );
+
+      try {
+        await notificationsApi.markAsRead(notification.id);
+        console.log('✅ Notification marked as read:', notification.id);
+      } catch (error) {
+        console.error('❌ Error marking as read:', error);
+        loadNotifications();
+      }
     }
 
+    // Navigate to related entity
     if (notification.data?.related_entity_type && notification.data?.related_entity_id) {
       const { related_entity_type, related_entity_id } = notification.data;
       
@@ -59,11 +70,14 @@ export default function SalesNotificationsScreen() {
   const handleMarkAllAsRead = async () => {
     if (!user) return;
     
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    
     try {
       await notificationsApi.markAllAsRead(user.id);
-      loadNotifications();
+      console.log('✅ All notifications marked as read');
     } catch (error) {
-      console.error('Error marking all as read:', error);
+      console.error('❌ Error marking all as read:', error);
+      loadNotifications();
     }
   };
 

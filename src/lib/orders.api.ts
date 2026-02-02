@@ -126,36 +126,58 @@ export async function createOrder(
 
   // Send notification to admin/ops users
   try {
+    console.log('🔔 [Notification] Starting notification flow for order:', orderNumber);
+    
     // Get retailer info
-    const { data: retailer } = await supabase
+    const { data: retailer, error: retailerError } = await supabase
       .from('retailers')
       .select('business_name, user_id')
       .eq('id', retailerId)
       .single();
+    
+    console.log('🔔 [Notification] Retailer data:', { retailer, retailerError });
 
-    // Get all admin/ops users
-    const { data: adminOpsUsers } = await supabase
+    // Get all admin/ops users from staff_users table
+    const { data: adminOpsUsers, error: staffError } = await supabase
       .from('staff_users')
-      .select('user_id')
+      .select('user_id, role, status')
       .in('role', ['admin', 'operations']);
+    
+    console.log('🔔 [Notification] Staff users query result:', { 
+      count: adminOpsUsers?.length || 0, 
+      users: adminOpsUsers,
+      error: staffError 
+    });
 
     if (adminOpsUsers && adminOpsUsers.length > 0) {
+      console.log('🔔 [Notification] Sending to', adminOpsUsers.length, 'admin/ops users');
+      
       for (const staffUser of adminOpsUsers) {
-        await notificationsApi.sendNotificationWithPush({
-          userId: staffUser.user_id,
-          type: 'new_order',
-          title: 'New Order Received',
-          body: `Order #${orderNumber} from ${retailer?.business_name || 'Retailer'}`,
-          data: {
-            related_entity_type: 'order',
-            related_entity_id: order.id,
-          },
-        });
+        console.log('🔔 [Notification] Sending to user:', staffUser.user_id);
+        
+        try {
+          await notificationsApi.sendNotificationWithPush({
+            userId: staffUser.user_id,
+            type: 'new_order',
+            title: 'New Order Received',
+            body: `Order #${orderNumber} from ${retailer?.business_name || 'Retailer'}`,
+            data: {
+              related_entity_type: 'order',
+              related_entity_id: order.id,
+            },
+          });
+          
+          console.log('🔔 [Notification] Successfully sent to:', staffUser.user_id);
+        } catch (sendError) {
+          console.error('🔔 [Notification] Failed to send to user:', staffUser.user_id, sendError);
+        }
       }
+    } else {
+      console.log('🔔 [Notification] WARNING: No admin/ops users found!');
     }
   } catch (notifError) {
     // Don't fail order creation if notification fails
-    console.error('Error sending order notification:', notifError);
+    console.error('🔔 [Notification] Error in notification flow:', notifError);
   }
 
   // Return order with items

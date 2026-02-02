@@ -10,6 +10,8 @@ interface Props {
 export const NotificationBellIcon: React.FC<Props> = ({ unreadCount, onPress }) => {
   const showBadge = unreadCount > 0;
   
+  console.log('🔔 [NotificationBellIcon] Rendering with unreadCount:', unreadCount, 'showBadge:', showBadge);
+  
   return (
     <TouchableOpacity
       onPress={onPress}
