@@ -10,9 +10,9 @@ if (process.env.NODE_ENV !== 'production') {
 
 module.exports = {
   expo: {
-    name: "MyApp1208",
-    scheme: "MyApp1208",
-    slug: "MyApp1208",
+    name: "Fittmart",
+    scheme: "fittmart",
+    slug: "fittmart",
     owner: "ghazalpansari",
     version: "1.0.0",
     orientation: "portrait",
@@ -28,7 +28,7 @@ module.exports = {
       supportsTablet: true
     },
     android: {
-      package: "com.myapp1208.app",
+      package: "com.fittmart.app",
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#ffffff"
