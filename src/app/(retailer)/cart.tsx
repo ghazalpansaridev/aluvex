@@ -10,9 +10,9 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter, useFocusEffect, useNavigation } from 'expo-router';
-import { useCart } from '../../../hooks/useCart';
-import { LoadingSpinner, EmptyState, Button } from '../../../components/ui';
-import { CartItem, CartSummary } from '../../../components/cart';
+import { useCart } from '../../hooks/useCart';
+import { LoadingSpinner, EmptyState, Button } from '../../components/ui';
+import { CartItem, CartSummary } from '../../components/cart';
 
 /**
  * Cart Screen

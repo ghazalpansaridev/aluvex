@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Card } from '../../../components/ui';
+import { Card } from '../../components/ui';
 
 export default function AdminDashboardScreen() {
   return (

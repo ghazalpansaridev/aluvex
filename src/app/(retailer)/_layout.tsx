@@ -1,12 +1,15 @@
 import { Tabs, Redirect } from 'expo-router';
-import { Text } from 'react-native';
+import { Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../lib/auth-context';
 import { useCart } from '../../hooks/useCart';
+import { useNotifications } from '../../hooks/useNotifications';
 import { LoadingSpinner } from '../../components/ui';
 
 export default function RetailerLayout() {
-  const { role, retailerStatus, loading } = useAuth();
+  const { role, retailerStatus, loading, user } = useAuth();
   const { cartCount } = useCart();
+  const { unreadCount } = useNotifications(user?.id || null);
 
   if (loading) {
     return <LoadingSpinner fullScreen />;
@@ -21,15 +24,44 @@ export default function RetailerLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: '#007AFF',
-        tabBarInactiveTintColor: '#999',
+        tabBarInactiveTintColor: '#333',
         headerShown: true,
+        tabBarStyle: {
+          height: Platform.OS === 'web' ? 60 : 65,
+          paddingBottom: Platform.OS === 'web' ? 8 : 10,
+          paddingTop: Platform.OS === 'web' ? 8 : 8,
+          paddingHorizontal: 0,
+          paddingLeft: 0,
+          paddingRight: 0,
+          backgroundColor: '#fff',
+          borderTopWidth: 1,
+          borderTopColor: '#ddd',
+          width: '100%',
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '500',
+          marginTop: 2,
+        },
+        tabBarIconStyle: {
+          marginBottom: 0,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 4,
+          paddingHorizontal: 0,
+          flex: 1,
+          maxWidth: '20%',
+        },
       }}
     >
       <Tabs.Screen
         name="catalog"
         options={{
-          title: 'Catalog',
-          tabBarIcon: ({ color }) => <TabIcon name="grid" color={color} />,
+          title: 'Home',
+          tabBarLabel: 'Home',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home-outline" size={size || 24} color={color} />
+          ),
           headerShown: false,
         }}
       />
@@ -37,64 +69,73 @@ export default function RetailerLayout() {
         name="cart"
         options={{
           title: 'Cart',
+          tabBarLabel: 'Cart',
           tabBarBadge: cartCount > 0 ? cartCount : undefined,
-          tabBarIcon: ({ color }) => <TabIcon name="cart" color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="cart-outline" size={size || 24} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="orders"
         options={{
           title: 'Orders',
-          tabBarIcon: ({ color }) => <TabIcon name="list" color={color} />,
+          tabBarLabel: 'Orders',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="list-outline" size={size || 24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          title: 'Notifications',
+          tabBarLabel: 'Notifs',
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="notifications-outline" size={size || 24} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="payments"
         options={{
           title: 'Payments',
-          tabBarIcon: ({ color }) => <TabIcon name="credit-card" color={color} />,
+          tabBarLabel: 'Payments',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="card-outline" size={size || 24} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color }) => <TabIcon name="settings" color={color} />,
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
         name="checkout"
         options={{
           title: 'Checkout',
-          href: null,
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
         name="order-confirmation"
         options={{
           title: 'Order Confirmation',
-          href: null,
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
         name="orders/[id]"
         options={{
           title: 'Order Details',
-          href: null,
+          tabBarButton: () => null,
         }}
       />
     </Tabs>
   );
 }
 
-// Simple tab icon component (replace with proper icon library)
-function TabIcon({ name, color }: { name: string; color: string }) {
-  const icons: Record<string, string> = {
-    grid: '🏪',
-    cart: '🛒',
-    list: '📋',
-    'credit-card': '💳',
-    settings: '⚙️',
-  };
-  return <Text style={{ fontSize: 20, color }}>{icons[name] || '•'}</Text>;
-}

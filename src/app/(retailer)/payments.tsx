@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { EmptyState } from '../../../components/ui';
+import { EmptyState } from '../../components/ui';
 
 export default function PaymentsScreen() {
   return (

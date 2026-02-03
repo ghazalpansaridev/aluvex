@@ -15,14 +15,14 @@ export default function CatalogLayout() {
       <Stack.Screen
         name="index"
         options={{
-          title: 'Catalog',
+          title: 'Home',
         }}
       />
       <Stack.Screen
         name="[id]"
         options={{
           title: 'Product Details',
-          headerBackTitle: 'Catalog',
+          headerBackTitle: 'Home',
         }}
       />
     </Stack>

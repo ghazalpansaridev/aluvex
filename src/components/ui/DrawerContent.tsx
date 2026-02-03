@@ -9,6 +9,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../lib/auth-context';
 
@@ -69,7 +70,7 @@ export const DrawerContent: React.FC<DrawerContentProps> = ({ onClose }) => {
       </View>
 
       <ScrollView style={styles.menuContainer}>
-        {/* Catalog - visible to all users */}
+        {/* Home - visible to all users */}
         <TouchableOpacity
           style={styles.menuItem}
           onPress={() => {
@@ -95,8 +96,8 @@ export const DrawerContent: React.FC<DrawerContentProps> = ({ onClose }) => {
             }
           }}
         >
-          <Text style={styles.menuIcon}>📝</Text>
-          <Text style={styles.menuText}>Catalog</Text>
+          <Ionicons name="home-outline" size={24} color="#333" style={styles.menuIcon} />
+          <Text style={styles.menuText}>Home</Text>
         </TouchableOpacity>
 
         {/* Show Login/Register only if not logged in */}
@@ -107,7 +108,7 @@ export const DrawerContent: React.FC<DrawerContentProps> = ({ onClose }) => {
               style={styles.menuItem}
               onPress={() => handleNavigation('/(auth)/login')}
             >
-              <Text style={styles.menuIcon}>🔐</Text>
+              <Ionicons name="log-in-outline" size={24} color="#333" style={styles.menuIcon} />
               <Text style={styles.menuText}>Login / Register</Text>
             </TouchableOpacity>
           </>
@@ -123,29 +124,36 @@ export const DrawerContent: React.FC<DrawerContentProps> = ({ onClose }) => {
                   style={styles.menuItem}
                   onPress={() => handleNavigation('/(admin)/dashboard')}
                 >
-                  <Text style={styles.menuIcon}>📊</Text>
+                  <Ionicons name="stats-chart-outline" size={24} color="#333" style={styles.menuIcon} />
                   <Text style={styles.menuText}>Dashboard</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.menuItem}
                   onPress={() => handleNavigation('/(admin)/users')}
                 >
-                  <Text style={styles.menuIcon}>👥</Text>
+                  <Ionicons name="people-outline" size={24} color="#333" style={styles.menuIcon} />
                   <Text style={styles.menuText}>Users</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.menuItem}
                   onPress={() => handleNavigation('/(admin)/orders')}
                 >
-                  <Text style={styles.menuIcon}>📋</Text>
+                  <Ionicons name="list-outline" size={24} color="#333" style={styles.menuIcon} />
                   <Text style={styles.menuText}>Orders</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.menuItem}
-                  onPress={() => handleNavigation('/(ops)/items')}
+                  onPress={() => handleNavigation('/(admin)/items')}
                 >
-                  <Text style={styles.menuIcon}>📦</Text>
-                  <Text style={styles.menuText}>Items</Text>
+                  <Ionicons name="cube-outline" size={24} color="#333" style={styles.menuIcon} />
+                  <Text style={styles.menuText}>Item Management</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => handleNavigation('/(ops)/sellers')}
+                >
+                  <Ionicons name="storefront-outline" size={24} color="#333" style={styles.menuIcon} />
+                  <Text style={styles.menuText}>Sellers</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -156,21 +164,21 @@ export const DrawerContent: React.FC<DrawerContentProps> = ({ onClose }) => {
                   style={styles.menuItem}
                   onPress={() => handleNavigation('/(ops)/orders')}
                 >
-                  <Text style={styles.menuIcon}>📋</Text>
+                  <Ionicons name="list-outline" size={24} color="#333" style={styles.menuIcon} />
                   <Text style={styles.menuText}>Orders</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.menuItem}
                   onPress={() => handleNavigation('/(ops)/items')}
                 >
-                  <Text style={styles.menuIcon}>📦</Text>
-                  <Text style={styles.menuText}>Items</Text>
+                  <Ionicons name="cube-outline" size={24} color="#333" style={styles.menuIcon} />
+                  <Text style={styles.menuText}>Item Management</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.menuItem}
                   onPress={() => handleNavigation('/(ops)/sellers')}
                 >
-                  <Text style={styles.menuIcon}>🏪</Text>
+                  <Ionicons name="storefront-outline" size={24} color="#333" style={styles.menuIcon} />
                   <Text style={styles.menuText}>Sellers</Text>
                 </TouchableOpacity>
               </>
@@ -182,7 +190,7 @@ export const DrawerContent: React.FC<DrawerContentProps> = ({ onClose }) => {
                   style={styles.menuItem}
                   onPress={() => handleNavigation('/(sales)/retailers')}
                 >
-                  <Text style={styles.menuIcon}>👥</Text>
+                  <Ionicons name="people-outline" size={24} color="#333" style={styles.menuIcon} />
                   <Text style={styles.menuText}>Retailers</Text>
                 </TouchableOpacity>
               </>
@@ -194,21 +202,21 @@ export const DrawerContent: React.FC<DrawerContentProps> = ({ onClose }) => {
                   style={styles.menuItem}
                   onPress={() => handleNavigation('/(retailer)/cart')}
                 >
-                  <Text style={styles.menuIcon}>🛒</Text>
+                  <Ionicons name="cart-outline" size={24} color="#333" style={styles.menuIcon} />
                   <Text style={styles.menuText}>Cart</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.menuItem}
                   onPress={() => handleNavigation('/(retailer)/orders')}
                 >
-                  <Text style={styles.menuIcon}>📋</Text>
+                  <Ionicons name="list-outline" size={24} color="#333" style={styles.menuIcon} />
                   <Text style={styles.menuText}>Orders</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.menuItem}
                   onPress={() => handleNavigation('/(retailer)/payments')}
                 >
-                  <Text style={styles.menuIcon}>💳</Text>
+                  <Ionicons name="card-outline" size={24} color="#333" style={styles.menuIcon} />
                   <Text style={styles.menuText}>Payments</Text>
                 </TouchableOpacity>
               </>
@@ -230,7 +238,7 @@ export const DrawerContent: React.FC<DrawerContentProps> = ({ onClose }) => {
                 handleNavigation(settingsRoute);
               }}
             >
-              <Text style={styles.menuIcon}>⚙️</Text>
+              <Ionicons name="settings-outline" size={24} color="#333" style={styles.menuIcon} />
               <Text style={styles.menuText}>Settings</Text>
             </TouchableOpacity>
 
@@ -239,7 +247,7 @@ export const DrawerContent: React.FC<DrawerContentProps> = ({ onClose }) => {
               style={[styles.menuItem, styles.logoutMenuItem]}
               onPress={handleLogout}
             >
-              <Text style={styles.menuIcon}>🚪</Text>
+              <Ionicons name="log-out-outline" size={24} color="#ff3b30" style={styles.menuIcon} />
               <Text style={[styles.menuText, styles.logoutText]}>Logout</Text>
             </TouchableOpacity>
           </>
@@ -287,8 +295,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
   },
   menuIcon: {
-    fontSize: 24,
     width: 32,
+    marginRight: -12,
   },
   menuText: {
     fontSize: 16,

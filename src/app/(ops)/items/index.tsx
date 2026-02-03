@@ -455,7 +455,6 @@ export default function OpsItemsScreen() {
       {/* Header with count and Add button */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={styles.headerTitle}>Products</Text>
           {total > 0 && activeTab === 'items' && (
             <Text style={styles.itemCount}>
               📦 {total} {total === 1 ? 'item' : 'items'} in inventory

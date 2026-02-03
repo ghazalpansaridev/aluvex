@@ -51,7 +51,7 @@ export default function AdminCatalogScreen() {
   };
 
   const handleProductPress = (itemId: string) => {
-    router.push(`/(ops)/items/${itemId}`);
+    router.push(`/(admin)/items/${itemId}`);
   };
 
   const renderItem = useCallback(

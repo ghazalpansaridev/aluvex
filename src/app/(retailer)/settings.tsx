@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useAuth } from '../../../lib/auth-context';
-import { Card } from '../../../components/ui';
+import { useAuth } from '../../lib/auth-context';
+import { Card } from '../../components/ui';
 
 export default function SettingsScreen() {
   const { user, retailer } = useAuth();

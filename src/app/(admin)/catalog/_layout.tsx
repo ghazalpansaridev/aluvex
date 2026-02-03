@@ -9,7 +9,7 @@ export default function AdminCatalogLayout() {
       <Stack.Screen
         name="index"
         options={{
-          title: 'Catalog',
+          title: 'Home',
           headerShown: true,
         }}
       />

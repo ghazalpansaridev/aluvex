@@ -119,7 +119,7 @@ export default function RootLayout() {
             <Stack.Screen 
               name="catalog-guest" 
               options={{ 
-                title: 'Catalog',
+                title: 'Home',
                 headerShown: true,
               }} 
             />
