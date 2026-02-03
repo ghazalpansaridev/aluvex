@@ -35,16 +35,7 @@ export default function GuestCatalogPage() {
     search: searchQuery,
   });
 
-  // Set header with Login button
-  React.useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity onPress={handleLoginPress} style={{ marginRight: 16 }}>
-          <Text style={styles.headerButton}>Login</Text>
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation]);
+  // Header configuration removed - login button removed from top right
 
   const handleCategorySelect = (categoryId: string | undefined) => {
     setFilters(prev => ({ ...prev, categoryId, subcategoryId: undefined }));

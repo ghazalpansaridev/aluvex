@@ -26,13 +26,12 @@ export default function SalesLayout() {
           height: 65,
           paddingBottom: 10,
           paddingTop: 8,
-          paddingHorizontal: 0,
-          paddingLeft: 0,
-          paddingRight: 0,
+          padding: 0,
+          margin: 0,
           backgroundColor: '#fff',
           borderTopWidth: 1,
           borderTopColor: '#ddd',
-          width: '100%',
+          elevation: 0,
         },
         tabBarLabelStyle: {
           fontSize: 10,
@@ -44,8 +43,10 @@ export default function SalesLayout() {
         },
         tabBarItemStyle: {
           paddingVertical: 4,
-          paddingHorizontal: 0,
+          padding: 0,
+          margin: 0,
           flex: 1,
+          width: '33.33%',
         },
       }}
     >

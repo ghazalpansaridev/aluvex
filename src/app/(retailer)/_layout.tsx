@@ -30,13 +30,12 @@ export default function RetailerLayout() {
           height: Platform.OS === 'web' ? 60 : 65,
           paddingBottom: Platform.OS === 'web' ? 8 : 10,
           paddingTop: Platform.OS === 'web' ? 8 : 8,
-          paddingHorizontal: 0,
-          paddingLeft: 0,
-          paddingRight: 0,
+          padding: 0,
+          margin: 0,
           backgroundColor: '#fff',
           borderTopWidth: 1,
           borderTopColor: '#ddd',
-          width: '100%',
+          elevation: 0,
         },
         tabBarLabelStyle: {
           fontSize: 10,
@@ -48,9 +47,10 @@ export default function RetailerLayout() {
         },
         tabBarItemStyle: {
           paddingVertical: 4,
-          paddingHorizontal: 0,
+          padding: 0,
+          margin: 0,
           flex: 1,
-          maxWidth: '20%',
+          width: '20%',
         },
       }}
     >

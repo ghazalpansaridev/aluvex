@@ -134,8 +134,8 @@ export default function OpsNotificationsScreen() {
         )}
         ListEmptyComponent={
           <EmptyState
-            title="No notifications"
-            message={filter === 'unread' ? "You're all caught up!" : "You don't have any notifications yet"}
+            title={filter === 'unread' ? "You don't have any unread notifications" : "No notifications"}
+            message={filter === 'unread' ? undefined : "You don't have any notifications yet"}
             icon="notifications-outline"
           />
         }
