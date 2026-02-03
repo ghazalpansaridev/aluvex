@@ -49,6 +49,8 @@ export async function createOrder(
   cartItems: CartItemWithDetails[],
   deliveryAddress: string
 ): Promise<OrderWithItems> {
+  console.log('🚀 [DEBUG] createOrder function CALLED!', { retailerId, itemCount: cartItems?.length });
+  
   if (!cartItems || cartItems.length === 0) {
     throw new Error('Cart is empty');
   }
@@ -123,6 +125,9 @@ export async function createOrder(
 
   // Clear cart
   await clearCart(retailerId);
+
+  console.log('🚀 [DEBUG] About to start notification flow...');
+  console.log('🚀 [DEBUG] Order created:', { id: order.id, number: orderNumber });
 
   // Send notification to admin/ops users
   try {

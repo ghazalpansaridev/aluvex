@@ -13,6 +13,18 @@ interface NotificationPayload {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+      },
+      status: 200,
+    });
+  }
+
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const payload: NotificationPayload = await req.json();
@@ -114,13 +126,19 @@ serve(async (req) => {
       push_tokens_found: tokens?.length || 0,
       push_sent: tokens && tokens.length > 0
     }), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
       status: 200,
     });
   } catch (error) {
     console.error('❌ [Edge Function] CRITICAL ERROR:', error);
     return new Response(JSON.stringify({ error: error.message }), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
       status: 500,
     });
   }
