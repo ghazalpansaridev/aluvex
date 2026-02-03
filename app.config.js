@@ -46,7 +46,7 @@ module.exports = {
     ],
     extra: {
       eas: {
-        projectId: "c5193903-3042-40ea-bdbc-7a4f35746806"
+        projectId: "c3b4d61e-f7ae-449d-a4db-1e90130f02ed"
       },
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
@@ -54,4 +54,5 @@ module.exports = {
     },
   },
 };
+
 

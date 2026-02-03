@@ -127,6 +127,8 @@ export async function createOrder(
   // Send notification to admin/ops users
   try {
     console.log('🔔 [Notification] Starting notification flow for order:', orderNumber);
+    console.log('🔔 [Notification] Order ID:', order.id);
+    console.log('🔔 [Notification] Retailer ID:', retailerId);
     
     // Get retailer info
     const { data: retailer, error: retailerError } = await supabase
@@ -135,25 +137,41 @@ export async function createOrder(
       .eq('id', retailerId)
       .single();
     
-    console.log('🔔 [Notification] Retailer data:', { retailer, retailerError });
+    console.log('🔔 [Notification] Retailer data:', { 
+      business_name: retailer?.business_name,
+      has_user_id: !!retailer?.user_id,
+      error: retailerError 
+    });
 
-    // Get all admin/ops users from staff_users table
+    // Get all active admin/ops users using database function (bypasses RLS)
+    console.log('🔔 [Notification] Querying active admin/ops users...');
     const { data: adminOpsUsers, error: staffError } = await supabase
-      .from('staff_users')
-      .select('user_id, role, status')
-      .in('role', ['admin', 'operations']);
+      .rpc('get_active_admin_ops_users');
     
     console.log('🔔 [Notification] Staff users query result:', { 
       count: adminOpsUsers?.length || 0, 
-      users: adminOpsUsers,
-      error: staffError 
+      users: adminOpsUsers?.map((u: any) => ({ 
+        user_id: u.user_id, 
+        role: u.role,
+        name: `${u.first_name} ${u.last_name}`
+      })),
+      error: staffError?.message || null
     });
+
+    if (staffError) {
+      console.error('🔔 [Notification] ERROR querying staff users:', staffError);
+      throw staffError;
+    }
 
     if (adminOpsUsers && adminOpsUsers.length > 0) {
       console.log('🔔 [Notification] Sending to', adminOpsUsers.length, 'admin/ops users');
       
       for (const staffUser of adminOpsUsers) {
-        console.log('🔔 [Notification] Sending to user:', staffUser.user_id);
+        console.log('🔔 [Notification] Attempting to send to:', {
+          user_id: staffUser.user_id,
+          role: staffUser.role,
+          name: `${staffUser.first_name} ${staffUser.last_name}`
+        });
         
         try {
           await notificationsApi.sendNotificationWithPush({
@@ -167,17 +185,25 @@ export async function createOrder(
             },
           });
           
-          console.log('🔔 [Notification] Successfully sent to:', staffUser.user_id);
-        } catch (sendError) {
-          console.error('🔔 [Notification] Failed to send to user:', staffUser.user_id, sendError);
+          console.log('✅ [Notification] Successfully sent to:', staffUser.user_id);
+        } catch (sendError: any) {
+          console.error('❌ [Notification] Failed to send to user:', staffUser.user_id);
+          console.error('❌ [Notification] Error details:', sendError?.message || sendError);
         }
       }
+      
+      console.log('🔔 [Notification] Notification flow completed for all users');
     } else {
-      console.log('🔔 [Notification] WARNING: No admin/ops users found!');
+      console.log('⚠️  [Notification] WARNING: No active admin/ops users found!');
+      console.log('⚠️  [Notification] Please check:');
+      console.log('   1. staff_users table has records with role="admin" or "operations"');
+      console.log('   2. Those users have status="active"');
+      console.log('   3. The database function get_active_admin_ops_users() exists');
     }
-  } catch (notifError) {
+  } catch (notifError: any) {
     // Don't fail order creation if notification fails
-    console.error('🔔 [Notification] Error in notification flow:', notifError);
+    console.error('❌ [Notification] CRITICAL ERROR in notification flow:', notifError?.message || notifError);
+    console.error('❌ [Notification] Stack trace:', notifError?.stack);
   }
 
   // Return order with items
