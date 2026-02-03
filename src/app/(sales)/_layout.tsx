@@ -1,5 +1,5 @@
 import { Tabs, Redirect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../../lib/auth-context';
 import { useNotifications } from '../../hooks/useNotifications';
 import { LoadingSpinner } from '../../components/ui';
@@ -20,76 +20,63 @@ export default function SalesLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: '#007AFF',
-        tabBarInactiveTintColor: '#333',
+        tabBarInactiveTintColor: '#8E8E93',
         headerShown: true,
         tabBarStyle: {
-          height: 65,
-          paddingBottom: 10,
-          paddingTop: 8,
-          padding: 0,
-          margin: 0,
           backgroundColor: '#fff',
-          borderTopWidth: 1,
           borderTopColor: '#ddd',
-          elevation: 0,
-        },
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '500',
-          marginTop: 2,
-        },
-        tabBarIconStyle: {
-          marginBottom: 0,
-        },
-        tabBarItemStyle: {
-          paddingVertical: 4,
-          padding: 0,
-          margin: 0,
-          flex: 1,
-          width: '33.33%',
+          borderTopWidth: 1,
         },
       }}
     >
       <Tabs.Screen
         name="catalog"
-        options={{ 
+        options={{
           title: 'Home',
-          tabBarLabel: 'Home',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size || 24} color={color} />
-          ),
           headerShown: false,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'home' : 'home-outline'}
+              size={24}
+              color={color}
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="retailers"
-        options={{ 
+        options={{
           title: 'Retailers',
-          tabBarLabel: 'Retailers',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people-outline" size={size || 24} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'people' : 'people-outline'}
+              size={24}
+              color={color}
+            />
           ),
         }}
       />
       <Tabs.Screen
         name="notifications"
-        options={{ 
-          title: 'Notifications',
-          tabBarLabel: 'Notifs',
+        options={{
+          title: 'Notifs',
           tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="notifications-outline" size={size || 24} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'notifications' : 'notifications-outline'}
+              size={24}
+              color={color}
+            />
           ),
         }}
       />
       <Tabs.Screen
         name="settings"
-        options={{ 
+        options={{
           title: 'Settings',
-          tabBarButton: () => null,
+          href: null,
         }}
       />
     </Tabs>
   );
 }
-
