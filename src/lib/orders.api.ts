@@ -569,20 +569,8 @@ export async function createShipment(data: {
 
   if (orderUpdateError) throw orderUpdateError;
 
-  // Deduct shipped quantities from item stock
-  for (const shipmentItem of data.items) {
-    const item = items.find(i => i.id === shipmentItem.itemId);
-    if (!item) continue;
-
-    const newStock = item.current_stock - shipmentItem.quantity;
-    
-    const { error: stockError } = await supabase
-      .from('items')
-      .update({ current_stock: newStock })
-      .eq('id', shipmentItem.itemId);
-
-    if (stockError) throw stockError;
-  }
+  // Note: Stock deduction is handled by the DB trigger `trigger_update_stock_on_shipment`
+  // on shipment_items INSERT — no app-level deduction needed.
 
   // TODO: Create payment debit transaction if credit limit assigned
   // TODO: Generate invoice PDF

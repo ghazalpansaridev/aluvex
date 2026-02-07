@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -18,11 +18,11 @@ export default function AdminOrdersScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<OrderStatus | 'all'>('all');
-  const [selectedDateRange, setSelectedDateRange] = useState('last_week');
+  const [selectedDateRange, setSelectedDateRange] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilterModal, setShowFilterModal] = useState(false);
 
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async () => {
     try {
       const filters: OrderFilters = {};
 
@@ -30,11 +30,13 @@ export default function AdminOrdersScreen() {
         filters.status = selectedStatus;
       }
 
-      const dateRange = formatDateRange(selectedDateRange);
-      filters.dateRange = {
-        start: dateRange.start.toISOString(),
-        end: dateRange.end.toISOString(),
-      };
+      if (selectedDateRange) {
+        const dateRange = formatDateRange(selectedDateRange);
+        filters.dateRange = {
+          start: dateRange.start.toISOString(),
+          end: dateRange.end.toISOString(),
+        };
+      }
 
       if (searchQuery.trim()) {
         filters.searchQuery = searchQuery.trim();
@@ -48,16 +50,12 @@ export default function AdminOrdersScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
-
-  useEffect(() => {
-    loadOrders();
   }, [selectedStatus, selectedDateRange, searchQuery]);
 
   useFocusEffect(
     useCallback(() => {
       loadOrders();
-    }, [selectedStatus, selectedDateRange, searchQuery])
+    }, [loadOrders])
   );
 
   const handleRefresh = () => {
@@ -107,7 +105,7 @@ export default function AdminOrdersScreen() {
 
   const handleClearFilters = () => {
     setSelectedStatus('all');
-    setSelectedDateRange('last_week');
+    setSelectedDateRange('');
     setSearchQuery('');
   };
 
@@ -158,10 +156,11 @@ export default function AdminOrdersScreen() {
         visible={showFilterModal}
         onClose={() => setShowFilterModal(false)}
         selectedStatus={selectedStatus}
-        onStatusChange={setSelectedStatus}
         selectedDateRange={selectedDateRange}
-        onDateRangeChange={setSelectedDateRange}
-        onApply={() => loadOrders()}
+        onApply={(status, dateRange) => {
+          setSelectedStatus(status);
+          setSelectedDateRange(dateRange);
+        }}
         onClearFilters={handleClearFilters}
         statusCounts={getStatusCounts()}
       />

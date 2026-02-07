@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,17 +20,15 @@ interface FilterChip {
 interface DateRangeOption {
   id: string;
   label: string;
-  value: 'last_week' | 'last_month' | 'last_3_months' | 'custom';
+  value: string; // '' | 'last_week' | 'last_month' | 'last_3_months'
 }
 
 interface OrderFilterBarProps {
   visible: boolean;
   onClose: () => void;
   selectedStatus: OrderStatus | 'all';
-  onStatusChange: (status: OrderStatus | 'all') => void;
   selectedDateRange: string;
-  onDateRangeChange: (range: string) => void;
-  onApply: () => void;
+  onApply: (status: OrderStatus | 'all', dateRange: string) => void;
   onClearFilters: () => void;
   statusCounts?: Record<string, number>;
 }
@@ -45,6 +43,7 @@ const STATUS_CHIPS: FilterChip[] = [
 ];
 
 const DATE_RANGE_OPTIONS: DateRangeOption[] = [
+  { id: 'all_time', label: 'All Time', value: '' },
   { id: 'last_week', label: 'Last Week', value: 'last_week' },
   { id: 'last_month', label: 'Last Month', value: 'last_month' },
   { id: 'last_3_months', label: 'Last 3 Months', value: 'last_3_months' },
@@ -54,18 +53,32 @@ export default function OrderFilterBar({
   visible,
   onClose,
   selectedStatus,
-  onStatusChange,
   selectedDateRange,
-  onDateRangeChange,
   onApply,
   onClearFilters,
   statusCounts,
 }: OrderFilterBarProps) {
-  const [showDateModal, setShowDateModal] = useState(false);
+  // Local state so changes only apply on "Apply" press
+  const [localStatus, setLocalStatus] = useState<OrderStatus | 'all'>(selectedStatus);
+  const [localDateRange, setLocalDateRange] = useState(selectedDateRange);
 
-  const getDateRangeLabel = () => {
-    const option = DATE_RANGE_OPTIONS.find(opt => opt.value === selectedDateRange);
-    return option?.label || 'Last Week';
+  // Sync local state when modal opens
+  useEffect(() => {
+    if (visible) {
+      setLocalStatus(selectedStatus);
+      setLocalDateRange(selectedDateRange);
+    }
+  }, [visible, selectedStatus, selectedDateRange]);
+
+  const handleApply = () => {
+    onApply(localStatus, localDateRange);
+    onClose();
+  };
+
+  const handleClear = () => {
+    setLocalStatus('all');
+    setLocalDateRange('');
+    onClearFilters();
   };
 
   return (
@@ -80,7 +93,7 @@ export default function OrderFilterBar({
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Filters</Text>
-            <TouchableOpacity onPress={onClearFilters}>
+            <TouchableOpacity onPress={handleClear}>
               <Text style={styles.clearButton}>Clear Filter</Text>
             </TouchableOpacity>
           </View>
@@ -90,14 +103,14 @@ export default function OrderFilterBar({
             <Text style={styles.sectionTitle}>Order Status</Text>
             <View style={styles.chipsContainer}>
               {STATUS_CHIPS.map(chip => {
-                const isActive = selectedStatus === chip.value;
+                const isActive = localStatus === chip.value;
                 const count = statusCounts?.[chip.value];
                 
                 return (
                   <TouchableOpacity
                     key={chip.id}
                     style={[styles.chip, isActive && styles.chipActive]}
-                    onPress={() => onStatusChange(chip.value)}
+                    onPress={() => setLocalStatus(chip.value)}
                     activeOpacity={0.7}
                   >
                     <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
@@ -113,12 +126,12 @@ export default function OrderFilterBar({
             <Text style={styles.sectionTitle}>Order Time</Text>
             <View style={styles.dateRangeContainer}>
               {DATE_RANGE_OPTIONS.map(option => {
-                const isActive = selectedDateRange === option.value;
+                const isActive = localDateRange === option.value;
                 return (
                   <TouchableOpacity
                     key={option.id}
                     style={[styles.chip, isActive && styles.chipActive]}
-                    onPress={() => onDateRangeChange(option.value)}
+                    onPress={() => setLocalDateRange(option.value)}
                     activeOpacity={0.7}
                   >
                     <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
@@ -141,10 +154,7 @@ export default function OrderFilterBar({
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.applyButton}
-              onPress={() => {
-                onApply();
-                onClose();
-              }}
+              onPress={handleApply}
               activeOpacity={0.7}
             >
               <Text style={styles.applyButtonText}>Apply</Text>
