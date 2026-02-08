@@ -33,6 +33,11 @@ module.exports = {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#ffffff"
       },
+      permissions: [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "POST_NOTIFICATIONS"
+      ],
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false
     },
@@ -42,7 +47,15 @@ module.exports = {
     },
     plugins: [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          icon: "./assets/icon.png",
+          color: "#007AFF",
+          sounds: []
+        }
+      ]
     ],
     extra: {
       eas: {

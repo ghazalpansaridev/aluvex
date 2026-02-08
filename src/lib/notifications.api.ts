@@ -102,6 +102,7 @@ export const notificationsApi = {
 
   // Send notification with push via Edge Function
   async sendNotificationWithPush(params: CreateNotificationParams): Promise<void> {
+    console.log('📤 [Notification] Invoking send-notification Edge Function...');
     const { data, error } = await supabase.functions.invoke('send-notification', {
       body: {
         user_id: params.userId,
@@ -112,6 +113,11 @@ export const notificationsApi = {
       },
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ [Notification] Edge Function error:', error);
+      throw error;
+    }
+    
+    console.log('✅ [Notification] Edge Function response:', data);
   },
 };

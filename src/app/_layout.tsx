@@ -14,9 +14,23 @@ function PushNotificationInitializer() {
   const router = useRouter();
 
   useEffect(() => {
+    console.log('🔄 [PushInit] useEffect triggered, user:', user ? `${user.id.substring(0, 8)}...` : 'null');
+    
     if (user) {
-      // Register for push notifications
-      pushNotifications.registerForPushNotifications(user.id);
+      console.log('✅ [PushInit] User authenticated, starting push registration...');
+      
+      // Register for push notifications (async but don't wait)
+      pushNotifications.registerForPushNotifications(user.id)
+        .then((token) => {
+          if (token) {
+            console.log('🎉 [PushInit] Push registration successful!');
+          } else {
+            console.log('⚠️ [PushInit] Push registration returned null (check logs above)');
+          }
+        })
+        .catch((error) => {
+          console.error('❌ [PushInit] Push registration failed:', error);
+        });
 
       // Setup handlers
       const cleanup = pushNotifications.setupNotificationHandlers((notification) => {
