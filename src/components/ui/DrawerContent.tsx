@@ -150,7 +150,7 @@ export const DrawerContent: React.FC<DrawerContentProps> = ({ onClose }) => {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.menuItem}
-                  onPress={() => handleNavigation('/(ops)/sellers')}
+                  onPress={() => handleNavigation('/(admin)/sellers')}
                 >
                   <Ionicons name="storefront-outline" size={24} color="#333" style={styles.menuIcon} />
                   <Text style={styles.menuText}>Sellers</Text>

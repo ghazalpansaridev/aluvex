@@ -23,7 +23,16 @@ export interface RegistrationFormData {
   ownerPhone: string;
   alternatePhone?: string;
   
-  // Step 4 - Auth
+  // Step 4 - Documents (optional)
+  documents?: {
+    type: 'pan' | 'gst' | 'other';
+    uri: string;
+    fileName: string;
+    mimeType: string;
+    fileSize?: number;
+  }[];
+
+  // Step 5 - Auth
   password: string;
   confirmPassword: string;
   acceptedTerms: boolean;

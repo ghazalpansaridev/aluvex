@@ -187,6 +187,34 @@ export interface Favorite {
   item?: Item;
 }
 
+// Retailer Document types
+export type DocumentType = 'pan' | 'gst' | 'other';
+
+export interface RetailerDocument {
+  id: string;
+  retailer_id: string;
+  document_type: DocumentType;
+  file_name: string;
+  file_url: string;
+  file_size?: number;
+  mime_type?: string;
+  uploaded_at: string;
+  uploaded_by?: string;
+}
+
+// Retailer with email from auth.users join
+export interface RetailerWithEmail extends Retailer {
+  email: string;
+  documents?: RetailerDocument[];
+}
+
+// Retailer filters for admin list
+export interface RetailerFilters {
+  status?: RetailerStatus | null;
+  search?: string;
+  pincode?: string;
+}
+
 // Staff User types
 export interface StaffUser {
   id: string;

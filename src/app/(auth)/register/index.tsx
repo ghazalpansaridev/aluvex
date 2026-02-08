@@ -4,15 +4,17 @@ import { useRouter } from 'expo-router';
 import { supabase, supabaseDb } from '../../../lib/supabase';
 import { config } from '../../../lib/config';
 import { useAuth } from '../../../lib/auth-context';
+import { uploadRetailerDocument } from '../../../lib/retailers.api';
 
 import StepEmail from './step-email';
 import StepOTP from './step-otp';
 import StepBusiness from './step-business';
 import StepOwner from './step-owner';
+import StepDocuments from './step-documents';
 import StepPassword from './step-password';
 import { RegistrationFormData } from '../../../types';
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 6;
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -178,8 +180,49 @@ export default function RegisterScreen() {
         throw new Error(`Failed to create retailer record: ${insertError.message}`);
       }
 
-      // 5. Refresh retailer data in context (with timeout protection)
-      console.log('Step 5: Refreshing retailer data...');
+      // 5. Upload documents if any were selected
+      if (formData.documents && formData.documents.length > 0) {
+        console.log('Step 5: Uploading documents...');
+        try {
+          // Get the retailer ID we just created
+          const { data: retailerRecord } = await supabase
+            .from('retailers')
+            .select('id')
+            .eq('user_id', userId)
+            .single();
+
+          if (retailerRecord?.id) {
+            for (const doc of formData.documents) {
+              console.log(`Uploading ${doc.type} document: ${doc.fileName}`);
+              const { error: uploadError } = await uploadRetailerDocument(
+                retailerRecord.id,
+                {
+                  uri: doc.uri,
+                  fileName: doc.fileName,
+                  mimeType: doc.mimeType,
+                  fileSize: doc.fileSize,
+                },
+                doc.type as 'pan' | 'gst' | 'other',
+                userId
+              );
+              if (uploadError) {
+                console.warn(`Document upload failed for ${doc.type}:`, uploadError);
+                // Don't block registration if document upload fails
+              } else {
+                console.log(`${doc.type} document uploaded successfully`);
+              }
+            }
+          } else {
+            console.warn('Could not find retailer record for document upload');
+          }
+        } catch (docError) {
+          console.warn('Document upload error (non-blocking):', docError);
+          // Don't block registration if document upload fails
+        }
+      }
+
+      // 6. Refresh retailer data in context (with timeout protection)
+      console.log('Step 6: Refreshing retailer data...');
       try {
         const refreshPromise = refreshRetailer();
         const timeoutPromise = new Promise((_, reject) => 
@@ -192,8 +235,8 @@ export default function RegisterScreen() {
         // Continue even if refresh fails
       }
 
-      // 6. Navigate to verification pending
-      console.log('Step 6: Navigating to verification pending...');
+      // 7. Navigate to verification pending
+      console.log('Step 7: Navigating to verification pending...');
       // #region agent log
       fetch('http://127.0.0.1:7242/ingest/dcab6c23-0f0c-4bdf-abf0-380458f434b9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'register/index.tsx:navigation',message:'Navigating to verification pending',data:{totalDuration:Date.now()-logStartTime},timestamp:Date.now(),sessionId:'debug-session',runId:'reg-attempt',hypothesisId:'ALL'})}).catch(()=>{});
       // #endregion
@@ -265,6 +308,17 @@ export default function RegisterScreen() {
         );
       case 5:
         return (
+          <StepDocuments
+            formData={formData}
+            updateFormData={updateFormData}
+            onNext={nextStep}
+            onBack={prevStep}
+            error={error}
+            setError={setError}
+          />
+        );
+      case 6:
+        return (
           <StepPassword
             formData={formData}
             updateFormData={updateFormData}
@@ -291,7 +345,7 @@ export default function RegisterScreen() {
       >
         {/* Progress indicator */}
         <View style={styles.progressContainer}>
-          {[1, 2, 3, 4, 5].map((step) => (
+          {[1, 2, 3, 4, 5, 6].map((step) => (
             <View
               key={step}
               style={[
