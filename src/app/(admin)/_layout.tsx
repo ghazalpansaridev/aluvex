@@ -29,6 +29,19 @@ export default function AdminLayout() {
         },
       }}
     >
+r      <Tabs.Screen
+        name="dashboard"
+        options={{
+          title: 'Dashboard',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name="bar-chart"
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
       <Tabs.Screen
         name="catalog"
         options={{
@@ -81,13 +94,6 @@ export default function AdminLayout() {
               color={color}
             />
           ),
-        }}
-      />
-      <Tabs.Screen
-        name="dashboard"
-        options={{
-          title: 'Dashboard',
-          href: null,
         }}
       />
       <Tabs.Screen
