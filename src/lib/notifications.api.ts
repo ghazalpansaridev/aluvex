@@ -114,10 +114,17 @@ export const notificationsApi = {
     });
 
     if (error) {
-      console.error('❌ [Notification] Edge Function error:', error);
+      const err = error as { message?: string; context?: { status?: number; statusText?: string } };
+      console.error('❌ [Notification] Edge Function error:', err.message ?? error);
+      if (err.context?.status) {
+        console.error('❌ [Notification] HTTP status:', err.context.status, err.context.statusText ?? '');
+        if (err.context.status === 401) {
+          console.error('❌ [Notification] Fix: Redeploy with JWT disabled: supabase functions deploy send-notification --no-verify-jwt');
+        }
+      }
       throw error;
     }
-    
+
     console.log('✅ [Notification] Edge Function response:', data);
   },
 };

@@ -279,7 +279,8 @@ export interface Notification {
 export interface PushToken {
   id: string;
   user_id: string;
-  expo_push_token: string;
+  expo_push_token: string | null;
+  fcm_token?: string | null;
   device_info?: {
     deviceName?: string;
     platform?: 'ios' | 'android';

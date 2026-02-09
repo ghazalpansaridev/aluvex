@@ -123,6 +123,9 @@ out/
 *.dSYM.zip
 *.dSYM
 
+# Firebase (keep google-services.json for builds; never commit service account key)
+firebase-service-account.json
+
 # Environment variables
 .env
 .env.local

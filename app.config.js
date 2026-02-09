@@ -29,6 +29,7 @@ module.exports = {
     },
     android: {
       package: "com.fittmart.app",
+      googleServicesFile: "./google-services.json",
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#ffffff"
@@ -48,6 +49,7 @@ module.exports = {
     plugins: [
       "expo-router",
       "expo-secure-store",
+      "@react-native-firebase/app",
       [
         "expo-notifications",
         {
@@ -55,7 +57,8 @@ module.exports = {
           color: "#007AFF",
           sounds: []
         }
-      ]
+      ],
+      "./plugins/fix-firebase-manifest.js"
     ],
     extra: {
       eas: {

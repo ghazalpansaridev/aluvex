@@ -1,0 +1,6 @@
+# Supabase local/config (see https://supabase.com/docs/guides/cli/config)
+
+[functions.send-notification]
+# Allow app to invoke without JWT (retailer places order -> calls this to notify admin).
+# The body contains user_id; we do not rely on JWT for auth inside the function.
+verify_jwt = false
