@@ -219,3 +219,4 @@ package-lock.json
 fittmart-design/
 supabase-fittmart
 /Documents
+.mcp.json
