@@ -1,9 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../../lib/auth-context';
 import { Card } from '../../components/ui';
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const { user, retailer } = useAuth();
 
   return (
@@ -21,7 +23,10 @@ export default function SettingsScreen() {
         <TouchableOpacity style={styles.menuItem}>
           <Text style={styles.menuText}>Delivery Address</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => router.push('/(retailer)/contact-us' as any)}
+        >
           <Text style={styles.menuText}>Support</Text>
         </TouchableOpacity>
       </View>

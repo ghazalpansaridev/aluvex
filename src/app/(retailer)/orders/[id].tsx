@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Linking,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { LoadingSpinner, Badge, Button } from '../../../components/ui';
@@ -48,8 +47,7 @@ export default function OrderDetailScreen() {
   }, [id]);
 
   const handleContactSupport = () => {
-    // Future: Navigate to contact us screen or open support
-    Linking.openURL('tel:+911234567890');
+    router.push('/(retailer)/contact-us' as any);
   };
 
   const getStatusVariant = (status: string) => {

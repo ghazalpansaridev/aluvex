@@ -103,6 +103,13 @@ export const DrawerContent: React.FC<DrawerContentProps> = ({ onClose }) => {
         {/* Show Login/Register only if not logged in */}
         {!session && (
           <>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => handleNavigation('/contact-us')}
+            >
+              <Ionicons name="call-outline" size={24} color="#333" style={styles.menuIcon} />
+              <Text style={styles.menuText}>Contact Us</Text>
+            </TouchableOpacity>
             <View style={styles.divider} />
             <TouchableOpacity
               style={styles.menuItem}
@@ -218,6 +225,13 @@ export const DrawerContent: React.FC<DrawerContentProps> = ({ onClose }) => {
                 >
                   <Ionicons name="card-outline" size={24} color="#333" style={styles.menuIcon} />
                   <Text style={styles.menuText}>Payments</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => handleNavigation('/(retailer)/contact-us')}
+                >
+                  <Ionicons name="call-outline" size={24} color="#333" style={styles.menuIcon} />
+                  <Text style={styles.menuText}>Contact Us</Text>
                 </TouchableOpacity>
               </>
             )}

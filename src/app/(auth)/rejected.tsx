@@ -14,8 +14,7 @@ export default function RejectedScreen() {
   };
 
   const handleContactSupport = () => {
-    // TODO: Replace with actual support email
-    Linking.openURL('mailto:support@fittmart.com?subject=Application%20Rejection%20Appeal');
+    Linking.openURL('mailto:sales@mailinator.com?subject=Fittmart%20-%20Application%20Rejection%20Appeal');
   };
 
   return (

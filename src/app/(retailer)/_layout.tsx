@@ -128,6 +128,13 @@ export default function RetailerLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="contact-us"
+        options={{
+          title: 'Contact Us',
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
