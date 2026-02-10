@@ -407,7 +407,7 @@ export async function fetchOrderDetails(
   // Calculate remaining quantities for each order item
   const itemsWithRemaining = data.items.map((item: OrderItem) => ({
     ...item,
-    remaining_quantity: item.quantity - item.shipped_quantity,
+    remaining_quantity: item.quantity - item.shipped_quantity - (item.cancelled_quantity || 0),
     shipment_items: [],
   }));
 
@@ -701,6 +701,140 @@ export async function cancelOrder(
   }
 
   return cancelledOrder;
+}
+
+/**
+ * Cancel specific order items (line-level cancellation)
+ * Steps:
+ * 1. Validate cancellation quantities against remaining
+ * 2. Update order_items.cancelled_quantity
+ * 3. Recalculate order status
+ * 4. Send notification to retailer
+ */
+export async function cancelOrderItems(data: {
+  orderId: string;
+  items: Array<{ orderItemId: string; quantity: number }>;
+  reason: string;
+  cancelledBy: string;
+}): Promise<void> {
+  if (data.items.length === 0) {
+    throw new Error('At least one item is required for cancellation');
+  }
+
+  if (!data.reason || data.reason.trim().length === 0) {
+    throw new Error('Cancellation reason is required');
+  }
+
+  // Fetch order items to validate quantities
+  const { data: orderItems, error: orderItemsError } = await supabase
+    .from('order_items')
+    .select('*')
+    .eq('order_id', data.orderId);
+
+  if (orderItemsError) throw orderItemsError;
+
+  // Validate cancellation quantities
+  for (const cancelItem of data.items) {
+    const orderItem = orderItems.find(oi => oi.id === cancelItem.orderItemId);
+    if (!orderItem) {
+      throw new Error(`Order item ${cancelItem.orderItemId} not found`);
+    }
+
+    const remaining = orderItem.quantity - orderItem.shipped_quantity - (orderItem.cancelled_quantity || 0);
+    if (cancelItem.quantity > remaining) {
+      throw new Error(
+        `Cannot cancel ${cancelItem.quantity} units of ${orderItem.item_name} - only ${remaining} remaining`
+      );
+    }
+
+    if (cancelItem.quantity <= 0) {
+      throw new Error('Cancellation quantity must be greater than 0');
+    }
+  }
+
+  // Update order_items.cancelled_quantity
+  for (const cancelItem of data.items) {
+    const orderItem = orderItems.find(oi => oi.id === cancelItem.orderItemId);
+    if (!orderItem) continue;
+
+    const newCancelledQuantity = (orderItem.cancelled_quantity || 0) + cancelItem.quantity;
+
+    const { error: updateError } = await supabase
+      .from('order_items')
+      .update({ cancelled_quantity: newCancelledQuantity })
+      .eq('id', cancelItem.orderItemId);
+
+    if (updateError) throw updateError;
+  }
+
+  // Fetch updated order items to calculate new status
+  const { data: updatedOrderItems, error: updatedError } = await supabase
+    .from('order_items')
+    .select('*')
+    .eq('order_id', data.orderId);
+
+  if (updatedError) throw updatedError;
+
+  // Fetch current order status
+  const { data: currentOrder, error: orderError } = await supabase
+    .from('orders')
+    .select('status')
+    .eq('id', data.orderId)
+    .single();
+
+  if (orderError) throw orderError;
+
+  // Calculate new order status
+  const newStatus = calculateOrderStatus(updatedOrderItems, currentOrder.status as OrderStatus);
+
+  // Update order status (and cancellation info if fully cancelled)
+  const updateData: Record<string, any> = { status: newStatus };
+  if (newStatus === 'cancelled') {
+    updateData.cancellation_reason = data.reason;
+    updateData.cancelled_by = data.cancelledBy;
+    updateData.cancelled_at = new Date().toISOString();
+  }
+
+  const { error: orderUpdateError } = await supabase
+    .from('orders')
+    .update(updateData)
+    .eq('id', data.orderId);
+
+  if (orderUpdateError) throw orderUpdateError;
+
+  // Send notification to retailer
+  try {
+    const { data: orderWithRetailer } = await supabase
+      .from('orders')
+      .select(`
+        id,
+        order_number,
+        retailer:retailers!orders_retailer_id_fkey(user_id)
+      `)
+      .eq('id', data.orderId)
+      .single();
+
+    if (orderWithRetailer && orderWithRetailer.retailer) {
+      const retailer = orderWithRetailer.retailer as any;
+      const itemNames = data.items.map(i => {
+        const oi = orderItems.find(o => o.id === i.orderItemId);
+        return oi ? `${oi.item_name} (x${i.quantity})` : '';
+      }).filter(Boolean).join(', ');
+
+      await notificationsApi.sendNotificationWithPush({
+        userId: retailer.user_id,
+        type: 'order_cancelled',
+        title: 'Items Cancelled',
+        body: `Items cancelled from order #${orderWithRetailer.order_number}: ${itemNames}. Reason: ${data.reason}`,
+        data: {
+          related_entity_type: 'order',
+          related_entity_id: data.orderId,
+        },
+      });
+    }
+  } catch (notifError) {
+    console.error('Error sending item cancellation notification:', notifError);
+  }
 }
 
 /**

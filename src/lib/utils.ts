@@ -113,27 +113,45 @@ export function generateInvoiceNumber(): string {
  * - Placed: No shipments (all shipped_quantity = 0)
  * - Processing: Admin acknowledged, no shipments yet
  * - Partially Shipped: Some items shipped but not all
- * - Shipped: All items fully shipped (quantity = shipped_quantity for all)
+ * - Shipped: All items fully resolved (shipped + cancelled = quantity) and at least one shipped
+ * - Cancelled: All items fully cancelled (none shipped)
  */
 export function calculateOrderStatus(
-  orderItems: Array<{ quantity: number; shipped_quantity: number }>,
+  orderItems: Array<{ quantity: number; shipped_quantity: number; cancelled_quantity?: number }>,
   currentStatus?: 'placed' | 'processing' | 'partially_shipped' | 'shipped' | 'cancelled'
-): 'placed' | 'processing' | 'partially_shipped' | 'shipped' {
-  // If currently processing and no shipments yet, keep as processing
+): 'placed' | 'processing' | 'partially_shipped' | 'shipped' | 'cancelled' {
+  // If currently processing and no shipments/cancellations yet, keep as processing
   if (currentStatus === 'processing') {
-    const hasShipments = orderItems.some(item => item.shipped_quantity > 0);
-    if (!hasShipments) return 'processing';
+    const hasActivity = orderItems.some(
+      item => item.shipped_quantity > 0 || (item.cancelled_quantity || 0) > 0
+    );
+    if (!hasActivity) return 'processing';
   }
 
-  const allUnshipped = orderItems.every(item => item.shipped_quantity === 0);
+  const allUnshipped = orderItems.every(
+    item => item.shipped_quantity === 0 && (item.cancelled_quantity || 0) === 0
+  );
   if (allUnshipped) return currentStatus === 'processing' ? 'processing' : 'placed';
 
-  const allShipped = orderItems.every(
-    item => item.shipped_quantity === item.quantity
+  // Check if all items are fully resolved (shipped + cancelled = ordered)
+  const allResolved = orderItems.every(
+    item => item.shipped_quantity + (item.cancelled_quantity || 0) >= item.quantity
   );
-  if (allShipped) return 'shipped';
 
-  return 'partially_shipped';
+  if (allResolved) {
+    const anyShipped = orderItems.some(item => item.shipped_quantity > 0);
+    // If all resolved and at least one item was shipped, order is "shipped"
+    if (anyShipped) return 'shipped';
+    // If all resolved but nothing shipped (everything cancelled)
+    return 'cancelled';
+  }
+
+  // Some activity but not all resolved
+  const anyShipped = orderItems.some(item => item.shipped_quantity > 0);
+  if (anyShipped) return 'partially_shipped';
+
+  // Only cancellations so far, but not all resolved — keep current or partially_shipped
+  return currentStatus === 'processing' ? 'processing' : 'partially_shipped';
 }
 
 /**
@@ -168,7 +186,7 @@ export function formatDateRange(range: string): { start: Date; end: Date } {
  * Ensures quantities don't exceed remaining quantities
  */
 export function validateShipmentQuantities(
-  orderItems: Array<{ id: string; quantity: number; shipped_quantity: number }>,
+  orderItems: Array<{ id: string; quantity: number; shipped_quantity: number; cancelled_quantity?: number }>,
   shipmentItems: Array<{ orderItemId: string; quantity: number }>
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
@@ -181,15 +199,15 @@ export function validateShipmentQuantities(
       continue;
     }
 
-    const remaining = orderItem.quantity - orderItem.shipped_quantity;
+    const remaining = orderItem.quantity - orderItem.shipped_quantity - (orderItem.cancelled_quantity || 0);
     if (shipmentItem.quantity > remaining) {
       errors.push(
-        `Cannot ship ${shipmentItem.quantity} units - only ${remaining} remaining`
+        `Cannot process ${shipmentItem.quantity} units - only ${remaining} remaining`
       );
     }
 
     if (shipmentItem.quantity <= 0) {
-      errors.push(`Shipment quantity must be greater than 0`);
+      errors.push(`Quantity must be greater than 0`);
     }
   }
 

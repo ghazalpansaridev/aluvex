@@ -140,6 +140,7 @@ export interface OrderItem {
   discount_percent: number;
   line_total: number;
   shipped_quantity: number;
+  cancelled_quantity: number;
   created_at: string;
 }
 

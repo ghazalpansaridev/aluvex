@@ -18,6 +18,7 @@ import {
   fetchOrderDetails,
   createShipment,
   cancelOrder,
+  cancelOrderItems,
   updateOrderStatus,
 } from '../../../lib/orders.api';
 import { OrderDetailsResponse } from '../../../types/database';
@@ -78,6 +79,37 @@ export default function AdminOrderDetailsScreen() {
     } catch (err: any) {
       console.error('Failed to create shipment:', err);
       Alert.alert('Error', err.message || 'Failed to create shipment');
+    } finally {
+      setShipmentLoading(false);
+    }
+  };
+
+  const handleCancelItems = async (data: {
+    items: Array<{ orderItemId: string; quantity: number }>;
+    reason: string;
+  }) => {
+    if (!order || !user) return;
+
+    try {
+      setShipmentLoading(true);
+      await cancelOrderItems({
+        orderId: order.id,
+        items: data.items,
+        reason: data.reason,
+        cancelledBy: user.id,
+      });
+
+      Alert.alert('Success', 'Selected items cancelled successfully', [
+        {
+          text: 'OK',
+          onPress: () => {
+            loadOrderDetails();
+          },
+        },
+      ]);
+    } catch (err: any) {
+      console.error('Failed to cancel items:', err);
+      Alert.alert('Error', err.message || 'Failed to cancel items');
     } finally {
       setShipmentLoading(false);
     }
@@ -173,7 +205,11 @@ export default function AdminOrderDetailsScreen() {
   }
 
   const canCreateShipment = order.status === 'processing' || order.status === 'partially_shipped';
-  const canCancel = order.status === 'placed' || order.status === 'processing' || order.status === 'partially_shipped';
+  const hasShipments = order.shipments && order.shipments.length > 0;
+
+  // Cancel Order button: only for 'placed' status.
+  // Once processing starts (and shipments may exist), use line-level cancel instead.
+  const canCancelFullOrder = order.status === 'placed';
 
   return (
     <View style={styles.container}>
@@ -226,6 +262,59 @@ export default function AdminOrderDetailsScreen() {
           </View>
         </View>
 
+        {/* Read-only Order Items - visible for ALL statuses */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Order Items</Text>
+          {order.items.map(item => (
+            <View key={item.id} style={styles.readOnlyItemCard}>
+              <View style={styles.readOnlyItemHeader}>
+                <Text style={styles.readOnlyItemName}>{item.item_name}</Text>
+                <Text style={styles.readOnlyItemSku}>SKU: {item.item_sku}</Text>
+              </View>
+              <View style={styles.readOnlyItemDetails}>
+                <View style={styles.readOnlyItemRow}>
+                  <Text style={styles.readOnlyDetailLabel}>Qty</Text>
+                  <Text style={styles.readOnlyDetailValue}>{item.quantity}</Text>
+                </View>
+                <View style={styles.readOnlyItemRow}>
+                  <Text style={styles.readOnlyDetailLabel}>Unit Price</Text>
+                  <Text style={styles.readOnlyDetailValue}>{formatPrice(item.unit_price)}</Text>
+                </View>
+                {item.discount_percent > 0 && (
+                  <View style={styles.readOnlyItemRow}>
+                    <Text style={styles.readOnlyDetailLabel}>Discount</Text>
+                    <Text style={[styles.readOnlyDetailValue, styles.discountText]}>
+                      {item.discount_percent}%
+                    </Text>
+                  </View>
+                )}
+                <View style={[styles.readOnlyItemRow, styles.lineTotalRow]}>
+                  <Text style={styles.lineTotalLabel}>Line Total</Text>
+                  <Text style={styles.lineTotalValue}>{formatPrice(item.line_total)}</Text>
+                </View>
+              </View>
+              {/* Fulfillment status for items that have activity */}
+              {(item.shipped_quantity > 0 || (item.cancelled_quantity || 0) > 0) && (
+                <View style={styles.fulfillmentStatus}>
+                  <Text style={styles.fulfillmentText}>
+                    Shipped: {item.shipped_quantity} / {item.quantity}
+                    {(item.cancelled_quantity || 0) > 0 && (
+                      <Text style={styles.cancelledText}>
+                        {' '}| Cancelled: {item.cancelled_quantity}
+                      </Text>
+                    )}
+                  </Text>
+                  {item.remaining_quantity > 0 && (
+                    <Text style={styles.pendingText}>
+                      Remaining: {item.remaining_quantity}
+                    </Text>
+                  )}
+                </View>
+              )}
+            </View>
+          ))}
+        </View>
+
         {/* Process Order Button - Only for 'placed' status */}
         {order.status === 'placed' && (
           <View style={styles.section}>
@@ -237,20 +326,21 @@ export default function AdminOrderDetailsScreen() {
           </View>
         )}
 
-        {/* Create Shipment Section */}
+        {/* Create Shipment / Cancel Items Section */}
         {canCreateShipment && order.items.some(item => item.remaining_quantity > 0) && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Create Shipment</Text>
+            <Text style={styles.sectionTitle}>Process Items</Text>
             <ShipmentForm
               orderItems={order.items}
               onSubmit={handleCreateShipment}
+              onCancelItems={handleCancelItems}
               loading={shipmentLoading}
             />
           </View>
         )}
 
         {/* Shipment History */}
-        {order.shipments && order.shipments.length > 0 && (
+        {hasShipments && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Shipment History</Text>
             {order.shipments.map(shipment => (
@@ -287,8 +377,8 @@ export default function AdminOrderDetailsScreen() {
           </View>
         </View>
 
-        {/* Cancel Order Button */}
-        {canCancel && (
+        {/* Cancel Order Button - Only for 'placed' status (before any processing/shipments) */}
+        {canCancelFullOrder && (
           <View style={styles.section}>
             <Button
               title="Cancel Order"
@@ -443,6 +533,90 @@ const styles = StyleSheet.create({
     color: '#333',
     marginRight: 16,
   },
+  // Read-only order items styles
+  readOnlyItemCard: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#e8e8e8',
+  },
+  readOnlyItemHeader: {
+    marginBottom: 10,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  readOnlyItemName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  readOnlyItemSku: {
+    fontSize: 12,
+    color: '#999',
+  },
+  readOnlyItemDetails: {
+    gap: 6,
+  },
+  readOnlyItemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  readOnlyDetailLabel: {
+    fontSize: 13,
+    color: '#666',
+  },
+  readOnlyDetailValue: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#333',
+  },
+  discountText: {
+    color: '#4CAF50',
+  },
+  lineTotalRow: {
+    marginTop: 6,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  lineTotalLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  lineTotalValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#007AFF',
+  },
+  fulfillmentStatus: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  fulfillmentText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4CAF50',
+  },
+  cancelledText: {
+    color: '#ef5350',
+  },
+  pendingText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FF9800',
+  },
+  // Summary styles
   summaryCard: {
     backgroundColor: '#fff',
     borderRadius: 12,
