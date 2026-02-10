@@ -15,7 +15,6 @@ interface StepOwnerProps {
   formData: Partial<RegistrationFormData>;
   updateFormData: (data: Partial<RegistrationFormData>) => void;
   onNext: () => void;
-  onBack: () => void;
   error: string | null;
   setError: (error: string | null) => void;
 }
@@ -24,7 +23,6 @@ export default function StepOwner({
   formData,
   updateFormData,
   onNext,
-  onBack,
   error,
   setError,
 }: StepOwnerProps) {
@@ -111,19 +109,12 @@ export default function StepOwner({
         error={fieldErrors.alternatePhone}
       />
 
-      <View style={styles.buttonContainer}>
-        <Button
-          title="Back"
-          onPress={onBack}
-          variant="outline"
-          style={styles.backButton}
-        />
-        <Button
-          title="Continue"
-          onPress={handleNext}
-          style={styles.nextButton}
-        />
-      </View>
+      <Button
+        title="Continue"
+        onPress={handleNext}
+        fullWidth
+        style={styles.nextButton}
+      />
     </View>
   );
 }
@@ -153,15 +144,7 @@ const styles = StyleSheet.create({
     color: '#991B1B',
     fontSize: 14,
   },
-  buttonContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  backButton: {
-    flex: 1,
-  },
   nextButton: {
-    flex: 2,
+    marginTop: 8,
   },
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Stack } from 'expo-router';
-import { HeaderLogo } from '../../../components/ui';
+import { HeaderLogo, BackButton } from '../../../components/ui';
 
 export default function RegisterLayout() {
   return (
@@ -10,8 +10,8 @@ export default function RegisterLayout() {
         options={{
           headerShown: true,
           title: 'Register',
-          headerBackTitle: 'Back',
           headerTitle: () => <HeaderLogo />,
+          headerLeft: () => <BackButton />,
         }}
       />
     </Stack>

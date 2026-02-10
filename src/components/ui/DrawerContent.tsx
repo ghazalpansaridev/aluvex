@@ -28,6 +28,13 @@ export const DrawerContent: React.FC<DrawerContentProps> = ({ onClose }) => {
     }, 300);
   };
 
+  const handleHomeNavigation = (route: string) => {
+    onClose();
+    setTimeout(() => {
+      router.replace(route as any);
+    }, 300);
+  };
+
   const handleLogout = async () => {
     // For web, use confirm dialog, for mobile use Alert
     if (Platform.OS === 'web') {
@@ -75,24 +82,19 @@ export const DrawerContent: React.FC<DrawerContentProps> = ({ onClose }) => {
           style={styles.menuItem}
           onPress={() => {
             // Navigate to appropriate catalog based on authentication status and role
+            // Use replace to reset the stack so no back button appears on Home
             if (!session) {
-              // Guest user - go to guest catalog page
-              handleNavigation('/catalog-guest');
+              handleHomeNavigation('/catalog-guest');
             } else if (role === 'retailer') {
-              // Retailer - go to retailer catalog
-              handleNavigation('/(retailer)/catalog');
+              handleHomeNavigation('/(retailer)/catalog');
             } else if (role === 'sales') {
-              // Sales - go to sales catalog
-              handleNavigation('/(sales)/catalog');
+              handleHomeNavigation('/(sales)/catalog');
             } else if (role === 'admin') {
-              // Admin - go to admin catalog
-              handleNavigation('/(admin)/catalog');
+              handleHomeNavigation('/(admin)/catalog');
             } else if (role === 'operations') {
-              // Operations - go to ops catalog
-              handleNavigation('/(ops)/catalog');
+              handleHomeNavigation('/(ops)/catalog');
             } else {
-              // Fallback - go to guest catalog
-              handleNavigation('/catalog-guest');
+              handleHomeNavigation('/catalog-guest');
             }
           }}
         >

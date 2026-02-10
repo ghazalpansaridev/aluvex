@@ -1,25 +1,38 @@
 import React from 'react';
 import { Stack } from 'expo-router';
-import { HeaderLogo } from '../../components/ui';
+import { HeaderLogo, BackButton } from '../../components/ui';
 
 export default function AuthLayout() {
   return (
     <Stack>
-      <Stack.Screen name="login" options={{ headerShown: true, headerTitle: () => <HeaderLogo /> }} />
+      <Stack.Screen name="login" options={{ 
+        headerShown: true, 
+        headerTitle: () => <HeaderLogo />,
+        headerLeft: () => <BackButton />,
+      }} />
       <Stack.Screen 
         name="register" 
         options={{ 
           headerShown: false,
         }} 
       />
-      <Stack.Screen name="phone-verify" options={{ title: 'Verify Phone', headerTitle: () => <HeaderLogo /> }} />
-      <Stack.Screen name="forgot-password" options={{ title: 'Forgot Password', headerTitle: () => <HeaderLogo /> }} />
+      <Stack.Screen name="phone-verify" options={{ 
+        title: 'Verify Phone', 
+        headerTitle: () => <HeaderLogo />,
+        headerLeft: () => <BackButton />,
+      }} />
+      <Stack.Screen name="forgot-password" options={{ 
+        title: 'Forgot Password', 
+        headerTitle: () => <HeaderLogo />,
+        headerLeft: () => <BackButton />,
+      }} />
       <Stack.Screen 
         name="reset-password" 
         options={{ 
           title: 'Reset Password',
           headerShown: true,
           headerTitle: () => <HeaderLogo />,
+          headerLeft: () => <BackButton />,
         }} 
       />
       <Stack.Screen 
@@ -42,6 +55,7 @@ export default function AuthLayout() {
           title: 'Set Password',
           headerShown: true,
           headerTitle: () => <HeaderLogo />,
+          headerLeft: () => <BackButton />,
           gestureEnabled: false,
         }} 
       />

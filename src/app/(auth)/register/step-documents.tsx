@@ -26,7 +26,6 @@ interface StepDocumentsProps {
   formData: Partial<RegistrationFormData>;
   updateFormData: (data: Partial<RegistrationFormData>) => void;
   onNext: () => void;
-  onBack: () => void;
   error: string | null;
   setError: (error: string | null) => void;
 }
@@ -35,7 +34,6 @@ export default function StepDocuments({
   formData,
   updateFormData,
   onNext,
-  onBack,
   error,
   setError,
 }: StepDocumentsProps) {
@@ -252,19 +250,12 @@ export default function StepDocuments({
         </TouchableOpacity>
       )}
 
-      <View style={styles.buttonContainer}>
-        <Button
-          title="Back"
-          onPress={onBack}
-          variant="outline"
-          style={styles.backButton}
-        />
-        <Button
-          title={panDoc || gstDoc ? 'Next' : 'Skip'}
-          onPress={handleNext}
-          style={styles.nextButton}
-        />
-      </View>
+      <Button
+        title={panDoc || gstDoc ? 'Next' : 'Skip'}
+        onPress={handleNext}
+        fullWidth
+        style={styles.nextButton}
+      />
     </View>
   );
 }
@@ -369,15 +360,7 @@ const styles = StyleSheet.create({
   removeButton: {
     padding: 8,
   },
-  buttonContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 24,
-  },
-  backButton: {
-    flex: 1,
-  },
   nextButton: {
-    flex: 2,
+    marginTop: 24,
   },
 });

@@ -17,7 +17,6 @@ interface StepPasswordProps {
   formData: Partial<RegistrationFormData>;
   updateFormData: (data: Partial<RegistrationFormData>) => void;
   onSubmit: () => void;
-  onBack: () => void;
   error: string | null;
   setError: (error: string | null) => void;
   loading: boolean;
@@ -27,7 +26,6 @@ export default function StepPassword({
   formData,
   updateFormData,
   onSubmit,
-  onBack,
   error,
   setError,
   loading,
@@ -134,21 +132,13 @@ export default function StepPassword({
         <Text style={styles.termsError}>{fieldErrors.acceptedTerms}</Text>
       )}
 
-      <View style={styles.buttonContainer}>
-        <Button
-          title="Back"
-          onPress={onBack}
-          variant="outline"
-          style={styles.backButton}
-          disabled={loading}
-        />
-        <Button
-          title="Create Account"
-          onPress={handleSubmit}
-          loading={loading}
-          style={styles.nextButton}
-        />
-      </View>
+      <Button
+        title="Create Account"
+        onPress={handleSubmit}
+        loading={loading}
+        fullWidth
+        style={styles.nextButton}
+      />
     </View>
   );
 }
@@ -214,15 +204,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     marginLeft: 36,
   },
-  buttonContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 24,
-  },
-  backButton: {
-    flex: 1,
-  },
   nextButton: {
-    flex: 2,
+    marginTop: 24,
   },
 });

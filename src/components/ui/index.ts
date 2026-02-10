@@ -11,3 +11,4 @@ export { GlobalDrawer } from './GlobalDrawer';
 export { NotificationBellIcon } from './NotificationBellIcon';
 export { NotificationItem } from './NotificationItem';
 export { HeaderLogo } from './HeaderLogo';
+export { BackButton } from './BackButton';

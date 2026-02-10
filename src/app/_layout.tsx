@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { AuthProvider, useAuth } from '../lib/auth-context';
 import { DrawerProvider } from '../lib/drawer-context';
 import { supabase } from '../lib/supabase';
-import { GlobalDrawer, HeaderLogo } from '../components/ui';
+import { GlobalDrawer, HeaderLogo, BackButton } from '../components/ui';
 import { pushNotifications } from '../lib/push-notifications';
 
 function PushNotificationInitializer() {
@@ -122,6 +122,7 @@ export default function RootLayout() {
                 title: 'Home',
                 headerShown: true,
                 headerTitle: () => <HeaderLogo />,
+                headerLeft: () => null,
               }} 
             />
             <Stack.Screen 
@@ -129,6 +130,7 @@ export default function RootLayout() {
               options={{ 
                 headerShown: true,
                 headerTitle: () => <HeaderLogo />,
+                headerLeft: () => <BackButton />,
               }} 
             />
             <Stack.Screen 
@@ -137,6 +139,7 @@ export default function RootLayout() {
                 title: 'Contact Us',
                 headerShown: true,
                 headerTitle: () => <HeaderLogo />,
+                headerLeft: () => <BackButton />,
               }} 
             />
           </Stack>

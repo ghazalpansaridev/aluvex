@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useNavigation } from 'expo-router';
 import { supabase, supabaseDb } from '../../../lib/supabase';
 import { config } from '../../../lib/config';
 import { useAuth } from '../../../lib/auth-context';
 import { uploadRetailerDocument } from '../../../lib/retailers.api';
+import { BackButton } from '../../../components/ui';
 
 import StepEmail from './step-email';
 import StepOTP from './step-otp';
@@ -18,6 +19,7 @@ const TOTAL_STEPS = 6;
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { refreshRetailer } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -35,11 +37,22 @@ export default function RegisterScreen() {
     }
   };
 
-  const prevStep = () => {
+  const prevStep = useCallback(() => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+      setCurrentStep((prev) => prev - 1);
     }
-  };
+  }, [currentStep]);
+
+  // Dynamically update header back button based on current step
+  useEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <BackButton
+          onPress={currentStep === 1 ? () => router.back() : prevStep}
+        />
+      ),
+    });
+  }, [currentStep, navigation, router, prevStep]);
 
   const handleSubmit = async () => {
     // #region agent log
@@ -290,7 +303,6 @@ export default function RegisterScreen() {
             formData={formData}
             updateFormData={updateFormData}
             onNext={nextStep}
-            onBack={prevStep}
             error={error}
             setError={setError}
           />
@@ -301,7 +313,6 @@ export default function RegisterScreen() {
             formData={formData}
             updateFormData={updateFormData}
             onNext={nextStep}
-            onBack={prevStep}
             error={error}
             setError={setError}
           />
@@ -312,7 +323,6 @@ export default function RegisterScreen() {
             formData={formData}
             updateFormData={updateFormData}
             onNext={nextStep}
-            onBack={prevStep}
             error={error}
             setError={setError}
           />
@@ -323,7 +333,6 @@ export default function RegisterScreen() {
             formData={formData}
             updateFormData={updateFormData}
             onSubmit={handleSubmit}
-            onBack={prevStep}
             error={error}
             setError={setError}
             loading={loading}
