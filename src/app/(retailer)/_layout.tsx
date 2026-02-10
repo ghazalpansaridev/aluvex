@@ -4,7 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../../lib/auth-context';
 import { useCart } from '../../hooks/useCart';
 import { useNotifications } from '../../hooks/useNotifications';
-import { LoadingSpinner, HeaderLogo } from '../../components/ui';
+import { LoadingSpinner, HeaderLogo, BackButton } from '../../components/ui';
 
 export default function RetailerLayout() {
   const { role, retailerStatus, loading, user } = useAuth();
@@ -52,6 +52,7 @@ export default function RetailerLayout() {
         name="cart"
         options={{
           title: 'Cart',
+          headerLeft: () => <BackButton />,
           tabBarBadge: cartCount > 0 ? cartCount : undefined,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
@@ -66,6 +67,7 @@ export default function RetailerLayout() {
         name="orders"
         options={{
           title: 'Orders',
+          headerShown: false,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? 'list' : 'list-outline'}
@@ -79,6 +81,7 @@ export default function RetailerLayout() {
         name="notifications"
         options={{
           title: 'Notifs',
+          headerLeft: () => <BackButton />,
           tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
@@ -93,6 +96,7 @@ export default function RetailerLayout() {
         name="payments"
         options={{
           title: 'Payments',
+          headerLeft: () => <BackButton />,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? 'card' : 'card-outline'}
@@ -106,6 +110,7 @@ export default function RetailerLayout() {
         name="settings"
         options={{
           title: 'Settings',
+          headerLeft: () => <BackButton />,
           href: null,
         }}
       />
@@ -113,6 +118,7 @@ export default function RetailerLayout() {
         name="checkout"
         options={{
           title: 'Checkout',
+          headerLeft: () => <BackButton />,
           href: null,
         }}
       />
@@ -120,13 +126,7 @@ export default function RetailerLayout() {
         name="order-confirmation"
         options={{
           title: 'Order Confirmation',
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="orders/[id]"
-        options={{
-          title: 'Order Details',
+          headerLeft: () => <BackButton />,
           href: null,
         }}
       />
@@ -134,6 +134,7 @@ export default function RetailerLayout() {
         name="contact-us"
         options={{
           title: 'Contact Us',
+          headerLeft: () => <BackButton />,
           href: null,
         }}
       />
