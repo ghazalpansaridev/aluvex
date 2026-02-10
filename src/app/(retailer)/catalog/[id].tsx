@@ -13,7 +13,7 @@ import { useAuth } from '../../../lib/auth-context';
 import { useItem } from '../../../hooks/useItems';
 import { useCart } from '../../../hooks/useCart';
 import { LoadingSpinner, Button, Badge } from '../../../components/ui';
-import { PriceDisplay, QuantityCapsule } from '../../../components/catalog';
+import { PriceDisplay, AddToCartButton } from '../../../components/catalog';
 import { getPrimaryImage, getStockStatus, formatDiscount, calculateDiscountedPrice } from '../../../lib/utils';
 
 const { width } = Dimensions.get('window');
@@ -33,8 +33,6 @@ export default function ProductDetailScreen() {
   const { addItem, getItemQuantity, getCartItemId, updateQuantity } = useCart();
 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [quantityToAdd, setQuantityToAdd] = useState(1);
-  const [addingToCart, setAddingToCart] = useState(false);
 
   const isPending = retailerStatus === 'pending';
   const cartQuantity = item ? getItemQuantity(item.id) : 0;
@@ -81,14 +79,11 @@ export default function ProductDetailScreen() {
     }
 
     try {
-      setAddingToCart(true);
-      await addItem(item.id, quantityToAdd);
-      console.log(`Added ${quantityToAdd} item(s) to cart successfully`);
-      setQuantityToAdd(1); // Reset quantity after adding
+      await addItem(item.id, 1);
+      console.log('Added item to cart successfully');
     } catch (err: any) {
       console.error('Failed to add to cart:', err.message);
-    } finally {
-      setAddingToCart(false);
+      throw err;
     }
   };
 
@@ -102,6 +97,7 @@ export default function ProductDetailScreen() {
       await addItem(item.id, 1);
     } catch (err: any) {
       console.error('Failed to update cart:', err.message);
+      throw err;
     }
   };
 
@@ -114,6 +110,7 @@ export default function ProductDetailScreen() {
         await updateQuantity(cartItemId, cartQuantity - 1);
       } catch (err: any) {
         console.error('Failed to update cart:', err.message);
+        throw err;
       }
     }
   };
@@ -220,54 +217,20 @@ export default function ProductDetailScreen() {
               <Text style={styles.description}>{item.description}</Text>
             </View>
           )}
-
-          {/* Quantity selector - only for approved retailers when NOT in cart */}
-          {!isPending && isAvailableInPincode && !isOutOfStock && cartQuantity === 0 && (
-            <View style={styles.quantityContainer}>
-              <Text style={styles.quantityLabel}>Add Quantity</Text>
-              <View style={styles.quantityControls}>
-                <TouchableOpacity
-                  style={styles.quantityButton}
-                  onPress={() => setQuantityToAdd(Math.max(1, quantityToAdd - 1))}
-                  disabled={quantityToAdd <= 1}
-                >
-                  <Text style={styles.quantityButtonText}>−</Text>
-                </TouchableOpacity>
-                <Text style={styles.quantityValue}>{quantityToAdd}</Text>
-                <TouchableOpacity
-                  style={styles.quantityButton}
-                  onPress={() => setQuantityToAdd(quantityToAdd + 1)}
-                >
-                  <Text style={styles.quantityButtonText}>+</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-
-          {/* Capsule controls - when item is already in cart */}
-          {!isPending && isAvailableInPincode && !isOutOfStock && cartQuantity > 0 && (
-            <View style={styles.capsuleContainer}>
-              <Text style={styles.quantityLabel}>Quantity in Cart</Text>
-              <QuantityCapsule
-                quantity={cartQuantity}
-                onIncrement={handleIncrementQuantity}
-                onDecrement={handleDecrementQuantity}
-                size="md"
-              />
-            </View>
-          )}
         </View>
       </ScrollView>
 
-      {/* Add to Cart button - only show when item NOT in cart */}
-      {!isPending && cartQuantity === 0 && (
+      {/* Add to Cart button with inline quantity controls */}
+      {!isPending && (
         <View style={styles.bottomAction}>
-          <Button
-            title={isAvailableInPincode ? "Add to Cart" : "Not Available in Your Area"}
-            onPress={handleAddToCart}
-            disabled={!isAvailableInPincode || isOutOfStock || addingToCart}
-            loading={addingToCart}
-            variant="primary"
+          <AddToCartButton
+            itemId={item.id}
+            cartQuantity={cartQuantity}
+            onAddToCart={handleAddToCart}
+            onIncrement={handleIncrementQuantity}
+            onDecrement={handleDecrementQuantity}
+            disabled={!isAvailableInPincode || isOutOfStock}
+            availabilityMessage={isAvailableInPincode ? "Add to Cart" : "Not Available in Your Area"}
           />
         </View>
       )}
@@ -417,69 +380,11 @@ const styles = StyleSheet.create({
     color: '#666',
     lineHeight: 22,
   },
-  quantityContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 24,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-  },
-  quantityLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  quantityControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  quantityButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f5f5f5',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quantityButtonText: {
-    fontSize: 20,
-    color: '#333',
-    fontWeight: '600',
-  },
-  quantityValue: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    minWidth: 40,
-    textAlign: 'center',
-  },
   bottomAction: {
     padding: 16,
     paddingBottom: 32,
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#eee',
-  },
-  capsuleContainer: {
-    marginTop: 24,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-  },
-  cartQuantityInfo: {
-    marginTop: 12,
-    padding: 12,
-    backgroundColor: '#E3F2FD',
-    borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: '#007AFF',
-  },
-  cartQuantityText: {
-    fontSize: 14,
-    color: '#1565C0',
-    fontWeight: '500',
   },
 });
