@@ -1,6 +1,6 @@
 import React from 'react';
 import { Stack } from 'expo-router';
-import { HeaderLogo } from '../../../components/ui';
+import { HeaderLogo, BackButton } from '../../../components/ui';
 
 /**
  * Stack layout for admin catalog screens
@@ -15,6 +15,15 @@ export default function AdminCatalogLayout() {
           headerShown: true,
           headerTitle: () => <HeaderLogo />,
           headerLeft: () => null,
+        }}
+      />
+      <Stack.Screen
+        name="[id]"
+        options={{
+          title: 'Product Details',
+          headerShown: true,
+          headerTitle: () => <HeaderLogo />,
+          headerLeft: () => <BackButton />,
         }}
       />
     </Stack>
