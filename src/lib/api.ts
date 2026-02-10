@@ -1,4 +1,5 @@
 import { config } from './config';
+import * as FileSystem from 'expo-file-system/legacy';
 
 const SUPABASE_URL = config.supabaseUrl;
 const SUPABASE_ANON_KEY = config.supabaseAnonKey;
@@ -1029,19 +1030,33 @@ export async function uploadItemImage(
       throw new Error('Supabase client required');
     }
 
-    // Generate unique filename
-    const fileName = `${itemId}/${Date.now()}-${file.name}`;
+    // Ensure we always upload as JPEG (rename .heic/.heif extensions)
+    const sanitizedName = file.name.replace(/\.(heic|heif)$/i, '.jpg');
+    const contentType = file.type === 'image/heic' || file.type === 'image/heif'
+      ? 'image/jpeg'
+      : (file.type || 'image/jpeg');
 
-    // Convert file URI to blob for upload
-    // For React Native, we need to use fetch to get the blob
-    const response = await fetch(file.uri);
-    const blob = await response.blob();
+    // Generate unique filename
+    const fileName = `${itemId}/${Date.now()}-${sanitizedName}`;
+
+    // Read file as base64 using expo-file-system/legacy (works reliably on both iOS and Android
+    // unlike fetch()->blob() which produces 0-byte files on iOS for local/ph:// URIs)
+    const base64Data = await FileSystem.readAsStringAsync(file.uri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    // Decode base64 to ArrayBuffer for Supabase upload
+    const binaryStr = atob(base64Data);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) {
+      bytes[i] = binaryStr.charCodeAt(i);
+    }
 
     // Upload to Supabase storage
     const { error: uploadError } = await supabaseClient.storage
       .from('item-images')
-      .upload(fileName, blob, {
-        contentType: file.type || 'image/jpeg',
+      .upload(fileName, bytes.buffer, {
+        contentType,
         upsert: false,
       });
 

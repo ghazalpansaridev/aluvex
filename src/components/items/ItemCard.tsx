@@ -24,8 +24,10 @@ export function ItemCard({ item, onPress, onEdit, onDelete, onToggleStatus }: It
   const [showMenu, setShowMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   
-  // Get primary image or use null for placeholder
-  const primaryImage = item.images?.[0]?.image_url;
+  // Get primary image (prefer is_primary flag, fall back to first image)
+  const primaryImage =
+    item.images?.find((img: any) => img.is_primary)?.image_url ||
+    item.images?.[0]?.image_url;
   const hasImage = !!primaryImage;
 
   // Stock status logic
