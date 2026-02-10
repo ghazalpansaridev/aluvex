@@ -11,6 +11,7 @@ import {
   Image,
 } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
+import { HeaderLogo } from '../../../components/ui/HeaderLogo';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -343,7 +344,7 @@ export default function AddItemScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Add New Item' }} />
+      <Stack.Screen options={{ title: 'Add New Item', headerTitle: () => <HeaderLogo /> }} />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

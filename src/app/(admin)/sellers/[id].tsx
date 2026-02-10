@@ -21,6 +21,7 @@ import { Input } from '../../../components/ui/Input';
 import { Select } from '../../../components/ui/Select';
 import { Card } from '../../../components/ui/Card';
 import { LoadingSpinner } from '../../../components/ui/LoadingSpinner';
+import { HeaderLogo } from '../../../components/ui/HeaderLogo';
 import { useRetailer } from '../../../hooks/useRetailers';
 import { useAuth } from '../../../lib/auth-context';
 import {
@@ -276,7 +277,7 @@ export default function SellerDetailScreen() {
   if (error || !retailer) {
     return (
       <View style={styles.errorContainer}>
-        <Stack.Screen options={{ headerShown: true, title: 'Seller Details' }} />
+        <Stack.Screen options={{ headerShown: true, title: 'Seller Details', headerTitle: () => <HeaderLogo /> }} />
         <Text style={styles.errorText}>{error || 'Seller not found'}</Text>
         <Button title="Go Back" onPress={() => router.back()} variant="outline" />
       </View>
@@ -298,6 +299,7 @@ export default function SellerDetailScreen() {
         options={{
           headerShown: true,
           title: isEditing ? 'Edit Seller' : 'Seller Details',
+          headerTitle: () => <HeaderLogo />,
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => {

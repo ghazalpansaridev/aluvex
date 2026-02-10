@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { Platform } from 'react-native';
 import * as Linking from 'expo-linking';
@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { AuthProvider, useAuth } from '../lib/auth-context';
 import { DrawerProvider } from '../lib/drawer-context';
 import { supabase } from '../lib/supabase';
-import { GlobalDrawer } from '../components/ui';
+import { GlobalDrawer, HeaderLogo } from '../components/ui';
 import { pushNotifications } from '../lib/push-notifications';
 
 function PushNotificationInitializer() {
@@ -121,12 +121,14 @@ export default function RootLayout() {
               options={{ 
                 title: 'Home',
                 headerShown: true,
+                headerTitle: () => <HeaderLogo />,
               }} 
             />
             <Stack.Screen 
               name="categories" 
               options={{ 
                 headerShown: true,
+                headerTitle: () => <HeaderLogo />,
               }} 
             />
           </Stack>

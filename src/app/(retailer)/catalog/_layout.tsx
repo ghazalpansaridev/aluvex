@@ -1,4 +1,6 @@
+import React from 'react';
 import { Stack } from 'expo-router';
+import { HeaderLogo } from '../../../components/ui';
 
 /**
  * Stack layout for catalog screens
@@ -10,6 +12,7 @@ export default function CatalogLayout() {
       screenOptions={{
         headerShown: true,
         headerBackTitle: 'Back',
+        headerTitle: () => <HeaderLogo />,
       }}
     >
       <Stack.Screen

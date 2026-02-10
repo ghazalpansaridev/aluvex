@@ -11,6 +11,7 @@ import {
   Image,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { HeaderLogo } from '../../../components/ui/HeaderLogo';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -439,7 +440,7 @@ export default function EditItemScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Edit Item' }} />
+      <Stack.Screen options={{ title: 'Edit Item', headerTitle: () => <HeaderLogo /> }} />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

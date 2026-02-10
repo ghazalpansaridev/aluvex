@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { LoadingSpinner, Badge, Button } from '../../../components/ui';
+import { LoadingSpinner, Badge, Button, HeaderLogo } from '../../../components/ui';
 import { fetchOrderById, OrderWithItems } from '../../../lib/orders.api';
 import { formatPrice } from '../../../lib/utils';
 
@@ -122,6 +122,7 @@ export default function OrderDetailScreen() {
         options={{
           title: order.order_number,
           headerBackTitle: 'Orders',
+          headerTitle: () => <HeaderLogo />,
         }}
       />
       <ScrollView style={styles.container}>

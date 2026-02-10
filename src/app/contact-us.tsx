@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Card } from '../components/ui';
+import { Card, HeaderLogo } from '../components/ui';
 
 interface ContactPerson {
   name: string;
@@ -128,6 +128,7 @@ export default function ContactUsScreen() {
         options={{
           title: 'Contact Us',
           headerBackTitle: 'Back',
+          headerTitle: () => <HeaderLogo />,
         }}
       />
       <ScrollView

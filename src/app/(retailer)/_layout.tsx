@@ -1,9 +1,10 @@
+import React from 'react';
 import { Tabs, Redirect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../../lib/auth-context';
 import { useCart } from '../../hooks/useCart';
 import { useNotifications } from '../../hooks/useNotifications';
-import { LoadingSpinner } from '../../components/ui';
+import { LoadingSpinner, HeaderLogo } from '../../components/ui';
 
 export default function RetailerLayout() {
   const { role, retailerStatus, loading, user } = useAuth();
@@ -25,6 +26,7 @@ export default function RetailerLayout() {
         tabBarActiveTintColor: '#007AFF',
         tabBarInactiveTintColor: '#8E8E93',
         headerShown: true,
+        headerTitle: () => <HeaderLogo />,
         tabBarStyle: {
           backgroundColor: '#fff',
           borderTopColor: '#ddd',
