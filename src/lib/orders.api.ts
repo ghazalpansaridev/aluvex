@@ -205,6 +205,25 @@ export async function createOrder(
       console.log('   2. Those users have status="active"');
       console.log('   3. The database function get_active_admin_ops_users() exists');
     }
+
+    // Send "Order Placed" confirmation to the retailer
+    if (retailer?.user_id) {
+      try {
+        await notificationsApi.sendNotificationWithPush({
+          userId: retailer.user_id,
+          type: 'order_placed',
+          title: 'Order Placed',
+          body: `Your order #${orderNumber} has been placed successfully`,
+          data: {
+            related_entity_type: 'order',
+            related_entity_id: order.id,
+          },
+        });
+        console.log('✅ [Notification] Order placed confirmation sent to retailer');
+      } catch (retailerNotifError: any) {
+        console.error('❌ [Notification] Failed to send retailer confirmation:', retailerNotifError?.message);
+      }
+    }
   } catch (notifError: any) {
     // Don't fail order creation if notification fails
     console.error('❌ [Notification] CRITICAL ERROR in notification flow:', notifError?.message || notifError);
@@ -278,6 +297,53 @@ export async function fetchOrders(retailerId: string): Promise<Order[]> {
 }
 
 /**
+ * Fetch orders for a retailer with filters (search, status, date range)
+ */
+export async function fetchRetailerOrders(
+  retailerId: string,
+  filters?: OrderFilters
+): Promise<Order[]> {
+  let query = supabase
+    .from('orders')
+    .select(`
+      id,
+      order_number,
+      retailer_id,
+      status,
+      subtotal,
+      total_freight,
+      grand_total,
+      delivery_address,
+      cancellation_reason,
+      cancelled_at,
+      created_at,
+      updated_at
+    `)
+    .eq('retailer_id', retailerId);
+
+  if (filters?.status) {
+    query = query.eq('status', filters.status);
+  }
+
+  if (filters?.dateRange) {
+    query = query
+      .gte('created_at', filters.dateRange.start)
+      .lte('created_at', filters.dateRange.end);
+  }
+
+  if (filters?.searchQuery) {
+    query = query.ilike('order_number', `%${filters.searchQuery}%`);
+  }
+
+  query = query.order('created_at', { ascending: false });
+
+  const { data, error } = await query;
+
+  if (error) throw error;
+  return data || [];
+}
+
+/**
  * Fetch all orders with filters (admin/ops view)
  * Includes retailer details and order items
  */
@@ -333,10 +399,7 @@ export async function fetchAllOrders(
   }
 
   if (filters?.searchQuery) {
-    // Search in order number or retailer business name
-    query = query.or(
-      `order_number.ilike.%${filters.searchQuery}%,retailer.business_name.ilike.%${filters.searchQuery}%`
-    );
+    query = query.ilike('order_number', `%${filters.searchQuery}%`);
   }
 
   // Order by created_at descending (newest first)
@@ -592,12 +655,12 @@ export async function createShipment(data: {
       const retailer = orderWithRetailer.retailer as any;
       await notificationsApi.sendNotificationWithPush({
         userId: retailer.user_id,
-        type: 'order_shipped',
-        title: 'Order Shipped',
-        body: `Your order #${orderWithRetailer.order_number} has been shipped`,
+        type: 'order_update',
+        title: 'Order Update',
+        body: `Items from your order #${orderWithRetailer.order_number} have been shipped`,
         data: {
-          related_entity_type: 'shipment',
-          related_entity_id: shipment.id,
+          related_entity_type: 'order',
+          related_entity_id: data.orderId,
         },
       });
     }
@@ -686,9 +749,9 @@ export async function cancelOrder(
       const retailer = orderWithRetailer.retailer as any;
       await notificationsApi.sendNotificationWithPush({
         userId: retailer.user_id,
-        type: 'order_cancelled',
-        title: 'Order Cancelled',
-        body: `Order #${orderWithRetailer.order_number} has been cancelled. Reason: ${reason}`,
+        type: 'order_update',
+        title: 'Order Update',
+        body: `Your order #${orderWithRetailer.order_number} has been cancelled. Reason: ${reason}`,
         data: {
           related_entity_type: 'order',
           related_entity_id: orderId,
@@ -823,9 +886,9 @@ export async function cancelOrderItems(data: {
 
       await notificationsApi.sendNotificationWithPush({
         userId: retailer.user_id,
-        type: 'order_cancelled',
-        title: 'Items Cancelled',
-        body: `Items cancelled from order #${orderWithRetailer.order_number}: ${itemNames}. Reason: ${data.reason}`,
+        type: 'order_update',
+        title: 'Order Update',
+        body: `Items from your order #${orderWithRetailer.order_number} have been cancelled. Reason: ${data.reason}`,
         data: {
           related_entity_type: 'order',
           related_entity_id: data.orderId,

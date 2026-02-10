@@ -86,6 +86,8 @@ export default function OrderDetailScreen() {
     switch (status) {
       case 'placed':
         return 'Your order is being processed. You will be notified when it ships.';
+      case 'processing':
+        return 'Your order is being prepared for shipment. You will be notified when items are shipped.';
       case 'partially_shipped':
         return 'Some items have been shipped. Remaining items will be shipped soon.';
       case 'shipped':

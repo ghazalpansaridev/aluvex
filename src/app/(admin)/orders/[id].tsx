@@ -331,6 +331,7 @@ export default function AdminOrderDetailsScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Process Items</Text>
             <ShipmentForm
+              key={order.updated_at}
               orderItems={order.items}
               onSubmit={handleCreateShipment}
               onCancelItems={handleCancelItems}

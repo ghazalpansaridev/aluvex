@@ -60,6 +60,15 @@ export default function RetailerNotificationsScreen() {
         case 'order':
           router.push(`/(retailer)/orders/${related_entity_id}`);
           break;
+        case 'shipment':
+          // Legacy fallback: shipment notifications used to store shipment ID
+          // Navigate to orders list since we don't have the order ID directly
+          if (notification.data?.order_id) {
+            router.push(`/(retailer)/orders/${notification.data.order_id}`);
+          } else {
+            router.push('/(retailer)/orders');
+          }
+          break;
         case 'payment':
           router.push('/(retailer)/payments');
           break;

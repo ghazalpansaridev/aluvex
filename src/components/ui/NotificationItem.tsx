@@ -14,6 +14,7 @@ const getNotificationIcon = (type: string) => {
     order_placed: 'cart-outline',
     order_shipped: 'airplane-outline',
     order_cancelled: 'close-circle-outline',
+    order_update: 'refresh-circle-outline',
     payment_recorded: 'cash-outline',
     credit_limit_updated: 'wallet-outline',
     account_approved: 'checkmark-circle-outline',

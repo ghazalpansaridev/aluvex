@@ -280,6 +280,7 @@ export type NotificationType =
   | 'order_placed'
   | 'order_shipped'
   | 'order_cancelled'
+  | 'order_update'
   | 'payment_recorded'
   | 'credit_limit_updated'
   | 'account_approved'

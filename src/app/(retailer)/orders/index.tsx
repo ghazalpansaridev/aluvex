@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,13 +10,14 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '../../../lib/auth-context';
 import { EmptyState, LoadingSpinner, Badge } from '../../../components/ui';
-import { fetchOrders } from '../../../lib/orders.api';
-import { Order } from '../../../types/database';
-import { formatPrice } from '../../../lib/utils';
+import { SearchBar, OrderFilterBar } from '../../../components/orders';
+import { fetchRetailerOrders } from '../../../lib/orders.api';
+import { Order, OrderStatus, OrderFilters } from '../../../types/database';
+import { formatPrice, formatDateRange } from '../../../lib/utils';
 
 /**
  * Order History Screen
- * Displays list of orders for the logged-in retailer
+ * Displays list of orders for the logged-in retailer with search and filters
  */
 export default function OrdersScreen() {
   const router = useRouter();
@@ -24,12 +25,34 @@ export default function OrdersScreen() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<OrderStatus | 'all'>('all');
+  const [selectedDateRange, setSelectedDateRange] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async () => {
     if (!retailer) return;
 
     try {
-      const data = await fetchOrders(retailer.id);
+      const filters: OrderFilters = {};
+
+      if (selectedStatus !== 'all') {
+        filters.status = selectedStatus;
+      }
+
+      if (selectedDateRange) {
+        const dateRange = formatDateRange(selectedDateRange);
+        filters.dateRange = {
+          start: dateRange.start.toISOString(),
+          end: dateRange.end.toISOString(),
+        };
+      }
+
+      if (searchQuery.trim()) {
+        filters.searchQuery = searchQuery.trim();
+      }
+
+      const data = await fetchRetailerOrders(retailer.id, filters);
       setOrders(data);
     } catch (err) {
       console.error('Failed to load orders:', err);
@@ -37,20 +60,12 @@ export default function OrdersScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [retailer, selectedStatus, selectedDateRange, searchQuery]);
 
-  // Load orders on initial mount
-  useEffect(() => {
-    loadOrders();
-  }, [retailer]);
-
-  // Reload orders when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      if (retailer) {
-        loadOrders();
-      }
-    }, [retailer])
+      loadOrders();
+    }, [loadOrders])
   );
 
   const handleRefresh = () => {
@@ -62,9 +77,33 @@ export default function OrdersScreen() {
     router.push(`/(retailer)/orders/${orderId}`);
   };
 
+  const handleClearFilters = () => {
+    setSelectedStatus('all');
+    setSelectedDateRange('');
+    setSearchQuery('');
+  };
+
+  const getStatusCounts = () => {
+    const counts: Record<string, number> = {
+      all: orders.length,
+      placed: 0,
+      partially_shipped: 0,
+      shipped: 0,
+      cancelled: 0,
+    };
+
+    orders.forEach(order => {
+      counts[order.status] = (counts[order.status] || 0) + 1;
+    });
+
+    return counts;
+  };
+
   const getStatusVariant = (status: string) => {
     switch (status) {
       case 'placed':
+        return 'info';
+      case 'processing':
         return 'info';
       case 'partially_shipped':
         return 'warning';
@@ -81,6 +120,8 @@ export default function OrdersScreen() {
     switch (status) {
       case 'placed':
         return 'Placed';
+      case 'processing':
+        return 'Processing';
       case 'partially_shipped':
         return 'Partially Shipped';
       case 'shipped':
@@ -139,28 +180,51 @@ export default function OrdersScreen() {
     return <LoadingSpinner fullScreen message="Loading orders..." />;
   }
 
-  if (orders.length === 0) {
-    return (
-      <View style={styles.container}>
-        <EmptyState
-          title="No orders yet"
-          description="Your order history will appear here"
-          icon="📋"
-        />
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
-      <FlatList
-        data={orders}
-        renderItem={renderOrderCard}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
+      {/* Search Bar */}
+      <SearchBar
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        onFilterPress={() => setShowFilterModal(true)}
+        placeholder="Search by order number"
+      />
+
+      {/* Orders List */}
+      {orders.length === 0 ? (
+        <EmptyState
+          title={searchQuery || selectedStatus !== 'all' || selectedDateRange
+            ? 'No orders found'
+            : 'No orders yet'}
+          description={searchQuery || selectedStatus !== 'all' || selectedDateRange
+            ? 'Try adjusting your search or filters'
+            : 'Your order history will appear here'}
+          icon="📋"
+        />
+      ) : (
+        <FlatList
+          data={orders}
+          renderItem={renderOrderCard}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          }
+        />
+      )}
+
+      {/* Filter Modal */}
+      <OrderFilterBar
+        visible={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        selectedStatus={selectedStatus}
+        selectedDateRange={selectedDateRange}
+        onApply={(status, dateRange) => {
+          setSelectedStatus(status);
+          setSelectedDateRange(dateRange);
+        }}
+        onClearFilters={handleClearFilters}
+        statusCounts={getStatusCounts()}
       />
     </View>
   );
