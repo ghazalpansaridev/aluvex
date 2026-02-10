@@ -15,14 +15,23 @@ import { Button, Input } from '../../components/ui';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { session, loading: authLoading } = useAuth();
+  const { session, loading: authLoading, transitioning } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loginSuccess, setLoginSuccess] = useState(false);
+
+  // Wait for auth transition to complete after login before navigating
+  useEffect(() => {
+    if (loginSuccess && !transitioning && session) {
+      console.log('[Login] Auth transition complete, navigating to home...');
+      router.replace('/');
+    }
+  }, [loginSuccess, transitioning, session, router]);
 
   // Redirect already authenticated users
-  if (!authLoading && session) {
+  if (!authLoading && session && !loginSuccess) {
     return <Redirect href="/" />;
   }
 
@@ -46,14 +55,15 @@ export default function LoginScreen() {
 
       if (authError) throw authError;
 
-      // Navigation will be handled by index.tsx based on role
-      router.replace('/');
+      console.log('[Login] Sign in successful, waiting for auth state to update...');
+      // Set loginSuccess flag - navigation will happen in useEffect after transition completes
+      setLoginSuccess(true);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed';
       setError(errorMessage);
-    } finally {
       setLoading(false);
     }
+    // Keep loading state true until navigation completes
   };
 
   return (

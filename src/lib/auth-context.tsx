@@ -12,6 +12,7 @@ interface AuthContextType {
   retailerStatus: RetailerStatus | null;
   isPhoneVerified: boolean;
   loading: boolean;
+  transitioning: boolean;
   setPhoneVerified: (verified: boolean, saveToDB?: boolean) => Promise<void>;
   savePhoneVerificationForSignup: (phoneNumber: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -30,6 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [retailerStatus, setRetailerStatus] = useState<RetailerStatus | null>(null);
   const [isPhoneVerified, setIsPhoneVerified] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [transitioning, setTransitioning] = useState(false);
 
   // Fetch retailer data for retailer users
   const fetchRetailerData = useCallback(async (userId: string) => {
@@ -131,6 +133,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      console.log('[AuthContext] Auth state change event:', _event);
+      setTransitioning(true);
       setSession(newSession);
       
       if (newSession?.user) {
@@ -149,6 +153,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setRetailerStatus(null);
         setIsPhoneVerified(false);
       }
+      
+      setTransitioning(false);
+      console.log('[AuthContext] Auth state transition complete');
     });
 
     return () => subscription.unsubscribe();
@@ -228,6 +235,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         retailerStatus,
         isPhoneVerified,
         loading,
+        transitioning,
         setPhoneVerified,
         savePhoneVerificationForSignup,
         logout,
