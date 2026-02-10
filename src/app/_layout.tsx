@@ -131,6 +131,14 @@ export default function RootLayout() {
                 headerTitle: () => <HeaderLogo />,
               }} 
             />
+            <Stack.Screen 
+              name="contact-us" 
+              options={{ 
+                title: 'Contact Us',
+                headerShown: true,
+                headerTitle: () => <HeaderLogo />,
+              }} 
+            />
           </Stack>
         </GlobalDrawer>
       </DrawerProvider>

@@ -127,6 +127,7 @@ export default function ContactUsScreen() {
       <Stack.Screen
         options={{
           title: 'Contact Us',
+          headerShown: true,
           headerBackTitle: 'Back',
           headerTitle: () => <HeaderLogo />,
         }}

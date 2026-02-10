@@ -5,14 +5,11 @@ import { HeaderLogo } from '../../components/ui';
 export default function AuthLayout() {
   return (
     <Stack>
-      <Stack.Screen name="login" options={{ headerShown: false }} />
+      <Stack.Screen name="login" options={{ headerShown: true, headerTitle: () => <HeaderLogo /> }} />
       <Stack.Screen 
         name="register" 
         options={{ 
-          headerShown: true,
-          title: 'Register',
-          headerBackTitle: 'Back',
-          headerTitle: () => <HeaderLogo />,
+          headerShown: false,
         }} 
       />
       <Stack.Screen name="phone-verify" options={{ title: 'Verify Phone', headerTitle: () => <HeaderLogo /> }} />
