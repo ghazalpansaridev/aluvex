@@ -13,15 +13,13 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Select } from '../../../components/ui/Select';
 import { Card } from '../../../components/ui/Card';
 import { LoadingSpinner } from '../../../components/ui/LoadingSpinner';
-import { HeaderLogo } from '../../../components/ui/HeaderLogo';
 import { useRetailer } from '../../../hooks/useRetailers';
 import { useAuth } from '../../../lib/auth-context';
 import {
@@ -277,7 +275,6 @@ export default function SellerDetailScreen() {
   if (error || !retailer) {
     return (
       <View style={styles.errorContainer}>
-        <Stack.Screen options={{ headerShown: true, title: 'Seller Details', headerTitle: () => <HeaderLogo /> }} />
         <Text style={styles.errorText}>{error || 'Seller not found'}</Text>
         <Button title="Go Back" onPress={() => router.back()} variant="outline" />
       </View>
@@ -295,28 +292,6 @@ export default function SellerDetailScreen() {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: isEditing ? 'Edit Seller' : 'Seller Details',
-          headerTitle: () => <HeaderLogo />,
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => {
-                if (isEditing) {
-                  handleCancelEdit();
-                } else {
-                  router.back();
-                }
-              }}
-              style={styles.headerButton}
-            >
-              <Ionicons name="arrow-back" size={24} color="#007AFF" />
-            </TouchableOpacity>
-          ),
-        }}
-      />
-
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
@@ -784,9 +759,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#991B1B',
     textAlign: 'center',
-  },
-  headerButton: {
-    paddingRight: 16,
   },
   // Status Banner
   statusBanner: {

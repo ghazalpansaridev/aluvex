@@ -14,6 +14,7 @@ export default function AdminCatalogLayout() {
           title: 'Home',
           headerShown: true,
           headerTitle: () => <HeaderLogo />,
+          headerLeft: () => null,
         }}
       />
     </Stack>

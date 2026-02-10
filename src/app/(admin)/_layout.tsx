@@ -3,7 +3,7 @@ import { Tabs, Redirect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '../../lib/auth-context';
 import { useNotifications } from '../../hooks/useNotifications';
-import { LoadingSpinner, HeaderLogo } from '../../components/ui';
+import { LoadingSpinner, HeaderLogo, BackButton } from '../../components/ui';
 
 export default function AdminLayout() {
   const { role, loading, user } = useAuth();
@@ -49,6 +49,7 @@ export default function AdminLayout() {
         name="orders"
         options={{
           title: 'Orders',
+          headerShown: false,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? 'list' : 'list-outline'}
@@ -62,6 +63,7 @@ export default function AdminLayout() {
         name="users"
         options={{
           title: 'Users',
+          headerLeft: () => <BackButton />,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? 'people' : 'people-outline'}
@@ -75,6 +77,7 @@ export default function AdminLayout() {
         name="notifications"
         options={{
           title: 'Notifs',
+          headerLeft: () => <BackButton />,
           tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
@@ -89,6 +92,7 @@ export default function AdminLayout() {
         name="dashboard"
         options={{
           title: 'Dashboard',
+          headerLeft: () => <BackButton />,
           href: null,
         }}
       />
@@ -96,6 +100,7 @@ export default function AdminLayout() {
         name="settings"
         options={{
           title: 'Settings',
+          headerLeft: () => <BackButton />,
           href: null,
         }}
       />
@@ -103,6 +108,7 @@ export default function AdminLayout() {
         name="items"
         options={{
           title: 'Items',
+          headerShown: false,
           href: null,
         }}
       />
@@ -110,6 +116,7 @@ export default function AdminLayout() {
         name="sellers"
         options={{
           title: 'Sellers',
+          headerShown: false,
           href: null,
         }}
       />
