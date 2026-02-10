@@ -1,102 +1,102 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useAuth } from '../lib/auth-context';
+import { CartItemWithDetails } from '../lib/cart.api';
 import {
-  fetchCartItems,
-  addToCart,
-  updateCartQuantity,
-  removeFromCart,
-  clearCart,
-  getCartCount,
-  CartItemWithDetails,
-} from '../lib/cart.api';
-import { calculateDiscountedPrice } from '../lib/utils';
+  useCartStore,
+  selectItemQuantity,
+  selectCartItemId,
+  calculateItemPrice,
+  selectSubtotal,
+} from '../stores/cart.store';
 
 /**
  * Hook to manage cart operations
- * Provides cart data, operations, and calculated totals
+ * Thin wrapper around the Zustand cart store.
+ * Provides cart data, operations, and calculated totals.
+ * All consumers share the same global state so updates
+ * (e.g. badge count) propagate instantly.
  */
 export function useCart() {
   const { retailer } = useAuth();
-  const [cartItems, setCartItems] = useState<CartItemWithDetails[]>([]);
-  const [cartCount, setCartCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const loadCart = useCallback(async () => {
+  // Read from the global Zustand store
+  const cartItems = useCartStore(s => s.cartItems);
+  const cartCount = useCartStore(s => s.cartCount);
+  const loading = useCartStore(s => s.loading);
+  const error = useCartStore(s => s.error);
+  const storeRetailerId = useCartStore(s => s._retailerId);
+
+  // Store actions (stable references — Zustand actions never change identity)
+  const storeLoadCart = useCartStore(s => s.loadCart);
+  const storeAddItem = useCartStore(s => s.addItem);
+  const storeUpdateQuantity = useCartStore(s => s.updateQuantity);
+  const storeRemoveItem = useCartStore(s => s.removeItem);
+  const storeClear = useCartStore(s => s.clear);
+  const storeReset = useCartStore(s => s.reset);
+
+  // Load cart when retailer changes or on first mount
+  useEffect(() => {
     if (!retailer?.id) {
-      setCartItems([]);
-      setCartCount(0);
-      setLoading(false);
+      storeReset();
       return;
     }
-
-    try {
-      setLoading(true);
-      setError(null);
-      const [items, count] = await Promise.all([
-        fetchCartItems(retailer.id),
-        getCartCount(retailer.id),
-      ]);
-      setCartItems(items);
-      setCartCount(count);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load cart');
-      console.error('Error loading cart:', err);
-    } finally {
-      setLoading(false);
+    // Only reload if retailer changed or store was never initialized
+    if (storeRetailerId !== retailer.id) {
+      storeLoadCart(retailer.id);
     }
-  }, [retailer?.id]);
+  }, [retailer?.id, storeRetailerId, storeLoadCart, storeReset]);
 
-  useEffect(() => {
-    loadCart();
-  }, [loadCart]);
+  // --- Actions that bind retailerId automatically ---
 
-  const addItem = async (itemId: string, quantity: number = 1) => {
-    if (!retailer?.id) throw new Error('Not authenticated');
-    await addToCart(retailer.id, itemId, quantity);
-    await loadCart();
-  };
+  const addItem = useCallback(
+    async (itemId: string, quantity: number = 1) => {
+      if (!retailer?.id) throw new Error('Not authenticated');
+      await storeAddItem(retailer.id, itemId, quantity);
+    },
+    [retailer?.id, storeAddItem]
+  );
 
-  const updateQuantity = async (cartItemId: string, quantity: number) => {
-    await updateCartQuantity(cartItemId, quantity);
-    await loadCart();
-  };
+  const updateQuantity = useCallback(
+    async (cartItemId: string, quantity: number) => {
+      await storeUpdateQuantity(cartItemId, quantity);
+    },
+    [storeUpdateQuantity]
+  );
 
-  const removeItem = async (cartItemId: string) => {
-    await removeFromCart(cartItemId);
-    await loadCart();
-  };
+  const removeItem = useCallback(
+    async (cartItemId: string) => {
+      await storeRemoveItem(cartItemId);
+    },
+    [storeRemoveItem]
+  );
 
-  const clear = async () => {
+  const clear = useCallback(async () => {
     if (!retailer?.id) return;
-    await clearCart(retailer.id);
-    await loadCart();
-  };
+    await storeClear(retailer.id);
+  }, [retailer?.id, storeClear]);
 
-  // Calculate price for a single cart item (with discount)
-  const calculateItemPrice = (cartItem: CartItemWithDetails) => {
-    const mrp = cartItem.item.mrp;
-    const categoryDiscount = cartItem.item.category?.discount_percent || 0;
-    const subcategoryDiscount = cartItem.item.subcategory?.discount_percent;
-    return calculateDiscountedPrice(mrp, categoryDiscount, subcategoryDiscount);
-  };
+  const refetch = useCallback(async () => {
+    if (!retailer?.id) return;
+    await storeLoadCart(retailer.id);
+  }, [retailer?.id, storeLoadCart]);
 
-  // Calculate subtotal for all items in cart
-  const subtotal = cartItems.reduce((sum, cartItem) => {
-    return sum + (calculateItemPrice(cartItem) * cartItem.quantity);
-  }, 0);
+  // --- Derived values ---
 
-  // Get quantity for a specific item in cart
-  const getItemQuantity = useCallback((itemId: string): number => {
-    const cartItem = cartItems.find(ci => ci.item_id === itemId);
-    return cartItem?.quantity || 0;
-  }, [cartItems]);
+  const subtotal = selectSubtotal({ cartItems, cartCount, loading, error, _retailerId: storeRetailerId });
 
-  // Get cart item ID for a specific item
-  const getCartItemId = useCallback((itemId: string): string | undefined => {
-    const cartItem = cartItems.find(ci => ci.item_id === itemId);
-    return cartItem?.id;
-  }, [cartItems]);
+  const getItemQuantity = useCallback(
+    (itemId: string): number => {
+      return selectItemQuantity({ cartItems, cartCount, loading, error, _retailerId: storeRetailerId }, itemId);
+    },
+    [cartItems, cartCount, loading, error, storeRetailerId]
+  );
+
+  const getCartItemId = useCallback(
+    (itemId: string): string | undefined => {
+      return selectCartItemId({ cartItems, cartCount, loading, error, _retailerId: storeRetailerId }, itemId);
+    },
+    [cartItems, cartCount, loading, error, storeRetailerId]
+  );
 
   return {
     cartItems,
@@ -107,7 +107,7 @@ export function useCart() {
     updateQuantity,
     removeItem,
     clear,
-    refetch: loadCart,
+    refetch,
     subtotal,
     calculateItemPrice,
     getItemQuantity,
