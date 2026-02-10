@@ -10,14 +10,19 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '../../../lib/supabase';
-import { fetchItemById, ItemWithDetails } from '../../../lib/api';
-import { LoadingSpinner, EmptyState } from '../../../components/ui';
+import { supabase } from '../../../../lib/supabase';
+import { fetchItemById, ItemWithDetails } from '../../../../lib/api';
+import { LoadingSpinner, EmptyState } from '../../../../components/ui';
 
 const { width } = Dimensions.get('window');
 const IMAGE_WIDTH = width;
 
-export default function AdminProductDetailScreen() {
+/**
+ * Product Detail screen within the admin items stack.
+ * Navigated to from Item Management list (card press).
+ * "Edit Item" stays within the items stack: /(admin)/items/[id].
+ */
+export default function ItemsProductDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [item, setItem] = useState<ItemWithDetails | null>(null);
@@ -208,7 +213,7 @@ export default function AdminProductDetailScreen() {
         <View style={styles.actionContainer}>
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => router.push(`/(admin)/catalog/edit/${id}` as any)}
+            onPress={() => router.push(`/(admin)/items/${id}` as any)}
           >
             <Ionicons name="create-outline" size={20} color="#007AFF" />
             <Text style={styles.actionButtonText}>Edit Item</Text>

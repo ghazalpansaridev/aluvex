@@ -84,8 +84,13 @@ interface ImageFile {
   type: string;
 }
 
-export default function AddItemScreen() {
+export interface AddItemScreenProps {
+  backRoute?: string;
+}
+
+export function AddItemScreenBase({ backRoute }: AddItemScreenProps = {}) {
   const router = useRouter();
+  const navigateBackRoute = backRoute || '/(ops)/items';
   const { user, session } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -296,10 +301,10 @@ export default function AddItemScreen() {
       if (pincodesSet && imagesUploaded) {
         if (Platform.OS === 'web') {
           alert('Item created successfully');
-          router.push('/(ops)/items');
+          router.push(navigateBackRoute as any);
         } else {
           Alert.alert('Success', 'Item created successfully', [
-            { text: 'OK', onPress: () => router.push('/(ops)/items') },
+            { text: 'OK', onPress: () => router.push(navigateBackRoute as any) },
           ]);
         }
       } else {
@@ -311,10 +316,10 @@ export default function AddItemScreen() {
         
         if (Platform.OS === 'web') {
           alert(message);
-          router.push('/(ops)/items');
+          router.push(navigateBackRoute as any);
         } else {
           Alert.alert('Item Created', message, [
-            { text: 'OK', onPress: () => router.push('/(ops)/items') },
+            { text: 'OK', onPress: () => router.push(navigateBackRoute as any) },
           ]);
         }
       }
@@ -598,6 +603,11 @@ export default function AddItemScreen() {
       </KeyboardAvoidingView>
     </>
   );
+}
+
+// Default export for ops route - uses default backRoute (/(ops)/items)
+export default function AddItemScreen() {
+  return <AddItemScreenBase />;
 }
 
 const styles = StyleSheet.create({

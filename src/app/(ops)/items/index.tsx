@@ -20,7 +20,13 @@ import { ItemCard, SearchBar, ItemsFilters, ItemsSort, SortOption, StockTrackCar
 type StatusFilter = 'all' | 'active' | 'inactive' | 'draft';
 type TabType = 'items' | 'stock' | 'categories';
 
-export default function OpsItemsScreen() {
+export interface ItemsScreenProps {
+  onItemPress?: (itemId: string) => void;
+  onEditItem?: (itemId: string) => void;
+  onAddItem?: () => void;
+}
+
+export function ItemsScreen({ onItemPress, onEditItem, onAddItem }: ItemsScreenProps) {
   const router = useRouter();
   const { user } = useAuth();
   
@@ -216,15 +222,23 @@ export default function OpsItemsScreen() {
     loadItems(page, false);
   }, [page, loadItems]);
 
-  // Item press handler - navigate to edit screen
+  // Item press handler - navigate to detail/edit screen
   const handleItemPress = useCallback((itemId: string) => {
-    router.push(`/(ops)/items/${itemId}`);
-  }, [router]);
+    if (onItemPress) {
+      onItemPress(itemId);
+    } else {
+      router.push(`/(ops)/items/${itemId}`);
+    }
+  }, [router, onItemPress]);
 
   // Edit item handler
   const handleEditItem = useCallback((itemId: string) => {
-    router.push(`/(ops)/items/${itemId}`);
-  }, [router]);
+    if (onEditItem) {
+      onEditItem(itemId);
+    } else {
+      router.push(`/(ops)/items/${itemId}`);
+    }
+  }, [router, onEditItem]);
 
   // Toggle item status handler
   const handleToggleStatus = useCallback(async (itemId: string, currentStatus: string, newStatus: 'active' | 'inactive') => {
@@ -426,12 +440,16 @@ export default function OpsItemsScreen() {
           icon="📦"
           actionLabel="Add Item"
           onAction={() => {
-            router.push('/(ops)/items/add');
+            if (onAddItem) {
+              onAddItem();
+            } else {
+              router.push('/(ops)/items/add');
+            }
           }}
         />
       </View>
     );
-  }, [loading, error, handleRetry]);
+  }, [loading, error, handleRetry, onAddItem]);
 
   // Loading state
   if (loading && items.length === 0) {
@@ -465,7 +483,11 @@ export default function OpsItemsScreen() {
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => {
-              router.push('/(ops)/items/add');
+              if (onAddItem) {
+                onAddItem();
+              } else {
+                router.push('/(ops)/items/add');
+              }
             }}
           >
             <Text style={styles.addButtonText}>+ Add</Text>
@@ -631,6 +653,11 @@ export default function OpsItemsScreen() {
       </Modal>
     </View>
   );
+}
+
+// Default export for ops route - uses default navigation (/(ops)/ routes)
+export default function OpsItemsScreen() {
+  return <ItemsScreen />;
 }
 
 const styles = StyleSheet.create({

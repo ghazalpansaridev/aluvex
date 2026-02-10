@@ -26,6 +26,15 @@ export default function AdminCatalogLayout() {
           headerLeft: () => <BackButton />,
         }}
       />
+      <Stack.Screen
+        name="edit/[id]"
+        options={{
+          title: 'Edit Item',
+          headerShown: true,
+          headerTitle: () => <HeaderLogo />,
+          headerLeft: () => <BackButton />,
+        }}
+      />
     </Stack>
   );
 }

@@ -100,9 +100,14 @@ interface ExistingImage {
   is_primary: boolean;
 }
 
-export default function EditItemScreen() {
+export interface EditItemScreenProps {
+  backRoute?: string;
+}
+
+export function EditItemScreenBase({ backRoute }: EditItemScreenProps = {}) {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const navigateBackRoute = backRoute || '/(ops)/items';
   const { user, session } = useAuth();
   const [item, setItem] = useState<ItemWithDetails | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -401,10 +406,10 @@ export default function EditItemScreen() {
       // Show success message and navigate back
       if (Platform.OS === 'web') {
         alert('Item updated successfully');
-        router.push('/(ops)/items');
+        router.push(navigateBackRoute as any);
       } else {
         Alert.alert('Success', 'Item updated successfully', [
-          { text: 'OK', onPress: () => router.push('/(ops)/items') },
+          { text: 'OK', onPress: () => router.push(navigateBackRoute as any) },
         ]);
       }
     } catch (err: any) {
@@ -737,6 +742,11 @@ export default function EditItemScreen() {
       </KeyboardAvoidingView>
     </>
   );
+}
+
+// Default export for ops route - uses default backRoute (/(ops)/items)
+export default function EditItemScreen() {
+  return <EditItemScreenBase />;
 }
 
 const styles = StyleSheet.create({
