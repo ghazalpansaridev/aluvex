@@ -23,15 +23,19 @@ interface Subcategory {
   category_id: string;
 }
 
+type StatusFilter = 'all' | 'active' | 'inactive' | 'draft';
+
 interface ItemsFiltersProps {
   categoryId?: string;
   subcategoryId?: string;
   availability: 'all' | 'in_stock' | 'out_of_stock';
   pincodes: string[];
+  status?: StatusFilter;
   onCategoryChange: (categoryId: string | undefined) => void;
   onSubcategoryChange: (subcategoryId: string | undefined) => void;
   onAvailabilityChange: (availability: 'all' | 'in_stock' | 'out_of_stock') => void;
   onPincodesChange: (pincodes: string[]) => void;
+  onStatusChange?: (status: StatusFilter) => void;
   onClear: () => void;
 }
 
@@ -49,10 +53,12 @@ export function ItemsFilters({
   subcategoryId,
   availability,
   pincodes,
+  status = 'all',
   onCategoryChange,
   onSubcategoryChange,
   onAvailabilityChange,
   onPincodesChange,
+  onStatusChange,
   onClear,
 }: ItemsFiltersProps) {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -128,7 +134,8 @@ export function ItemsFilters({
     categoryId ||
     subcategoryId ||
     availability !== 'all' ||
-    pincodes.length > 0;
+    pincodes.length > 0 ||
+    status !== 'all';
 
   return (
     <View style={styles.container}>
@@ -160,6 +167,34 @@ export function ItemsFilters({
           placeholder="Select subcategory"
           disabled={!categoryId}
         />
+
+        {/* Status Filter */}
+        {onStatusChange && (
+          <View style={styles.filterSection}>
+            <Text style={styles.filterLabel}>Status</Text>
+            <View style={styles.chipContainer}>
+              {(['all', 'active', 'inactive', 'draft'] as const).map((s) => (
+                <TouchableOpacity
+                  key={s}
+                  style={[
+                    styles.chip,
+                    status === s && styles.chipActive,
+                  ]}
+                  onPress={() => onStatusChange(s)}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      status === s && styles.chipTextActive,
+                    ]}
+                  >
+                    {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Availability Filter */}
         <View style={styles.filterSection}>

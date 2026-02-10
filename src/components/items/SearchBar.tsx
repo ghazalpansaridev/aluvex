@@ -12,6 +12,9 @@ interface SearchBarProps {
   onSearch: (query: string) => void;
   placeholder?: string;
   debounceMs?: number;
+  onFilterPress?: () => void;
+  filterCount?: number;
+  rightContent?: React.ReactNode;
 }
 
 export function SearchBar({
@@ -19,6 +22,9 @@ export function SearchBar({
   onSearch,
   placeholder = 'Search by name or SKU...',
   debounceMs = 500,
+  onFilterPress,
+  filterCount = 0,
+  rightContent,
 }: SearchBarProps) {
   const [localValue, setLocalValue] = useState(value);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -70,44 +76,96 @@ export function SearchBar({
           </TouchableOpacity>
         )}
       </View>
+
+      {rightContent}
+
+      {onFilterPress && (
+        <TouchableOpacity
+          style={[styles.filterButton, filterCount > 0 && styles.filterButtonActive]}
+          onPress={onFilterPress}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.filterIcon}>☰</Text>
+          {filterCount > 0 && (
+            <View style={styles.filterBadge}>
+              <Text style={styles.filterBadgeText}>{filterCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+    gap: 10,
   },
   searchContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
     borderRadius: 8,
     paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#ddd',
+    height: 44,
   },
   searchIcon: {
-    fontSize: 16,
+    fontSize: 14,
     marginRight: 8,
   },
   input: {
     flex: 1,
-    paddingVertical: 10,
-    fontSize: 16,
+    fontSize: 14,
     color: '#333',
+    paddingVertical: 0,
   },
   clearButton: {
     padding: 4,
     marginLeft: 8,
   },
   clearIcon: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#999',
     fontWeight: '600',
+  },
+  filterButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterButtonActive: {
+    backgroundColor: '#E3F2FD',
+  },
+  filterIcon: {
+    fontSize: 18,
+    color: '#333',
+  },
+  filterBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  filterBadgeText: {
+    fontSize: 10,
+    color: '#fff',
+    fontWeight: '700',
   },
 });

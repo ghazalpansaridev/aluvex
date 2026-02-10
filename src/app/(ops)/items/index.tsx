@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Modal,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../../lib/auth-context';
@@ -58,7 +59,7 @@ export function ItemsScreen({ onItemPress, onEditItem, onAddItem }: ItemsScreenP
   const [stockChanges, setStockChanges] = useState<Record<string, number>>({});
   const [updatingStock, setUpdatingStock] = useState(false);
 
-  // Categories for filter chips
+  // Categories for active filter chip labels
   const [allCategories, setAllCategories] = useState<Array<{ id: string; name: string }>>([]);
 
   // Fetch items function with all filters
@@ -113,7 +114,7 @@ export function ItemsScreen({ onItemPress, onEditItem, onAddItem }: ItemsScreenP
     [categoryFilter, subcategoryFilter, availabilityFilter, pincodeFilter, statusFilter, searchQuery, sortBy]
   );
 
-  // Load categories for filter chips
+  // Load categories for filter chip labels
   useEffect(() => {
     const fetchCategoriesForFilters = async () => {
       try {
@@ -121,7 +122,7 @@ export function ItemsScreen({ onItemPress, onEditItem, onAddItem }: ItemsScreenP
           .from('categories')
           .select('id, name')
           .order('name')
-          .limit(6);
+          .limit(50);
 
         if (!error && data) {
           setAllCategories(data);
@@ -170,51 +171,67 @@ export function ItemsScreen({ onItemPress, onEditItem, onAddItem }: ItemsScreenP
     setSortBy('latest');
   }, []);
 
-  // Check if any filters are active (excluding status which has its own chips)
-  const hasActiveFilters = categoryFilter || subcategoryFilter || availabilityFilter !== 'all' || pincodeFilter.length > 0;
+  // Count active filters for badge
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (categoryFilter) count++;
+    if (subcategoryFilter) count++;
+    if (availabilityFilter !== 'all') count++;
+    if (pincodeFilter.length > 0) count++;
+    if (statusFilter !== 'all') count++;
+    return count;
+  }, [categoryFilter, subcategoryFilter, availabilityFilter, pincodeFilter, statusFilter]);
 
-  // Category filter chip component
-  const CategoryFilterChip = ({ categoryId, label }: { categoryId: string | null; label: string }) => (
-    <TouchableOpacity
-      style={[
-        styles.categoryChip,
-        categoryFilter === categoryId && styles.categoryChipActive,
-      ]}
-      onPress={() => {
-        setCategoryFilter(categoryId || undefined);
-        setSubcategoryFilter(undefined); // Clear subcategory when changing category
-      }}
-    >
-      <Text
-        style={[
-          styles.categoryChipText,
-          categoryFilter === categoryId && styles.categoryChipTextActive,
-        ]}
-      >
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
+  // Build active filter chips for display
+  const activeFilterChips = useMemo(() => {
+    const chips: Array<{ key: string; label: string; onRemove: () => void }> = [];
 
-  // Status filter chip component
-  const StatusFilterChip = ({ status, label }: { status: StatusFilter; label: string }) => (
-    <TouchableOpacity
-      style={[
-        styles.statusChip,
-        statusFilter === status && styles.statusChipActive,
-      ]}
-      onPress={() => setStatusFilter(status)}
-    >
-      <Text
-        style={[
-          styles.statusChipText,
-          statusFilter === status && styles.statusChipTextActive,
-        ]}
-      >
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
+    if (categoryFilter) {
+      const catName = allCategories.find((c) => c.id === categoryFilter)?.name || 'Category';
+      chips.push({
+        key: 'category',
+        label: catName,
+        onRemove: () => {
+          setCategoryFilter(undefined);
+          setSubcategoryFilter(undefined);
+        },
+      });
+    }
+
+    if (subcategoryFilter) {
+      chips.push({
+        key: 'subcategory',
+        label: 'Subcategory',
+        onRemove: () => setSubcategoryFilter(undefined),
+      });
+    }
+
+    if (statusFilter !== 'all') {
+      chips.push({
+        key: 'status',
+        label: statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1),
+        onRemove: () => setStatusFilter('all'),
+      });
+    }
+
+    if (availabilityFilter !== 'all') {
+      chips.push({
+        key: 'availability',
+        label: availabilityFilter === 'in_stock' ? 'In Stock' : 'Out of Stock',
+        onRemove: () => setAvailabilityFilter('all'),
+      });
+    }
+
+    if (pincodeFilter.length > 0) {
+      chips.push({
+        key: 'pincodes',
+        label: `${pincodeFilter.length} Pincode${pincodeFilter.length > 1 ? 's' : ''}`,
+        onRemove: () => setPincodeFilter([]),
+      });
+    }
+
+    return chips;
+  }, [categoryFilter, subcategoryFilter, statusFilter, availabilityFilter, pincodeFilter, allCategories]);
 
   // Retry handler
   const handleRetry = useCallback(() => {
@@ -451,6 +468,15 @@ export function ItemsScreen({ onItemPress, onEditItem, onAddItem }: ItemsScreenP
     );
   }, [loading, error, handleRetry, onAddItem]);
 
+  // Navigate to add item
+  const handleAddPress = useCallback(() => {
+    if (onAddItem) {
+      onAddItem();
+    } else {
+      router.push('/(ops)/items/add');
+    }
+  }, [onAddItem, router]);
+
   // Loading state
   if (loading && items.length === 0) {
     return <LoadingSpinner fullScreen message="Loading items..." />;
@@ -470,31 +496,6 @@ export function ItemsScreen({ onItemPress, onEditItem, onAddItem }: ItemsScreenP
 
   return (
     <View style={styles.container}>
-      {/* Header with count and Add button */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          {total > 0 && activeTab === 'items' && (
-            <Text style={styles.itemCount}>
-              📦 {total} {total === 1 ? 'item' : 'items'} in inventory
-            </Text>
-          )}
-        </View>
-        {activeTab === 'items' && (
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => {
-              if (onAddItem) {
-                onAddItem();
-              } else {
-                router.push('/(ops)/items/add');
-              }
-            }}
-          >
-            <Text style={styles.addButtonText}>+ Add</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
       {/* Tabs */}
       <View style={styles.tabsContainer}>
         <TabButton tab="items" label="ITEM LISTS" />
@@ -505,51 +506,48 @@ export function ItemsScreen({ onItemPress, onEditItem, onAddItem }: ItemsScreenP
       {/* Tab Content */}
       {activeTab === 'items' && (
         <>
-          {/* Category Filter Chips */}
-          {allCategories.length > 0 && (
-            <View style={styles.categoryFilterContainer}>
-              <FlatList
-                horizontal
-                data={[{ id: null, name: 'All' }, ...allCategories]}
-                keyExtractor={(item) => item.id || 'all'}
-                renderItem={({ item }) => (
-                  <CategoryFilterChip categoryId={item.id} label={item.name} />
-                )}
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.categoryChipsContent}
-              />
-            </View>
-          )}
-
-          {/* Search Bar */}
+          {/* Combined Search + Sort + Filter Row */}
           <SearchBar
             value={searchQuery}
             onSearch={setSearchQuery}
             placeholder="Search item..."
+            onFilterPress={() => setShowFilters(true)}
+            filterCount={activeFilterCount}
+            rightContent={
+              <View style={styles.sortInline}>
+                <ItemsSort sortBy={sortBy} onSortChange={setSortBy} compact />
+              </View>
+            }
           />
 
-          {/* Status Filter Chips */}
-          <View style={styles.statusFilterContainer}>
-            <StatusFilterChip status="all" label="All" />
-            <StatusFilterChip status="active" label="Active" />
-            <StatusFilterChip status="inactive" label="Inactive" />
-            <StatusFilterChip status="draft" label="Draft" />
-          </View>
-
-          {/* Filter and Sort Buttons */}
-          <View style={styles.filterBar}>
-            <TouchableOpacity
-              style={[styles.filterButton, hasActiveFilters && styles.filterButtonActive]}
-              onPress={() => setShowFilters(true)}
-            >
-              <Text style={[styles.filterButtonText, hasActiveFilters && styles.filterButtonTextActive]}>
-                🔍 Filters{hasActiveFilters && ` (${[categoryFilter && 'Cat', subcategoryFilter && 'Sub', availabilityFilter !== 'all' && 'Avail', pincodeFilter.length > 0 && `${pincodeFilter.length} Pins`].filter(Boolean).length})`}
-              </Text>
-            </TouchableOpacity>
-            <View style={styles.sortContainer}>
-              <ItemsSort sortBy={sortBy} onSortChange={setSortBy} compact />
+          {/* Active Filter Chips (conditional) */}
+          {activeFilterChips.length > 0 && (
+            <View style={styles.activeFiltersContainer}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.activeFiltersContent}
+              >
+                {activeFilterChips.map((chip) => (
+                  <View key={chip.key} style={styles.activeChip}>
+                    <Text style={styles.activeChipText}>{chip.label}</Text>
+                    <TouchableOpacity
+                      onPress={chip.onRemove}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={styles.activeChipRemove}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                <TouchableOpacity
+                  onPress={handleClearFilters}
+                  style={styles.clearAllButton}
+                >
+                  <Text style={styles.clearAllText}>Clear all</Text>
+                </TouchableOpacity>
+              </ScrollView>
             </View>
-          </View>
+          )}
 
           {/* Items List */}
           <FlatList
@@ -566,6 +564,15 @@ export function ItemsScreen({ onItemPress, onEditItem, onAddItem }: ItemsScreenP
             ListEmptyComponent={renderEmpty}
             ListFooterComponent={renderFooter}
           />
+
+          {/* FAB - Add Item */}
+          <TouchableOpacity
+            style={styles.fab}
+            onPress={handleAddPress}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.fabIcon}>+</Text>
+          </TouchableOpacity>
         </>
       )}
 
@@ -635,10 +642,12 @@ export function ItemsScreen({ onItemPress, onEditItem, onAddItem }: ItemsScreenP
               subcategoryId={subcategoryFilter}
               availability={availabilityFilter}
               pincodes={pincodeFilter}
+              status={statusFilter}
               onCategoryChange={setCategoryFilter}
               onSubcategoryChange={setSubcategoryFilter}
               onAvailabilityChange={setAvailabilityFilter}
               onPincodesChange={setPincodeFilter}
+              onStatusChange={setStatusFilter}
               onClear={handleClearFilters}
             />
             <View style={styles.modalFooter}>
@@ -664,47 +673,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
-  },
-  headerLeft: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: 4,
-  },
-  itemCount: {
-    fontSize: 13,
-    color: '#666',
-    fontWeight: '500',
-  },
-  addButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-    shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 14,
-    letterSpacing: 0.5,
   },
   tabsContainer: {
     flexDirection: 'row',
@@ -733,115 +701,54 @@ const styles = StyleSheet.create({
     color: '#FF9500',
     fontWeight: '700',
   },
-  tabContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+  sortInline: {
+    width: 140,
   },
-  placeholderText: {
-    fontSize: 16,
-    color: '#999',
-    fontWeight: '500',
-  },
-  filterBar: {
-    flexDirection: 'row',
+  activeFiltersContainer: {
     backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
-    alignItems: 'center',
+    borderBottomColor: '#eee',
   },
-  filterButton: {
+  activeFiltersContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f8f8',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    marginRight: 12,
   },
-  filterButtonActive: {
+  activeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#E3F2FD',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 6,
+    borderWidth: 1,
     borderColor: '#007AFF',
   },
-  filterButtonText: {
-    fontSize: 13,
-    color: '#666',
+  activeChipText: {
+    fontSize: 12,
+    color: '#007AFF',
     fontWeight: '600',
   },
-  filterButtonTextActive: {
+  activeChipRemove: {
+    fontSize: 11,
     color: '#007AFF',
     fontWeight: '700',
   },
-  sortContainer: {
-    flex: 1,
+  clearAllButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
   },
-  categoryFilterContainer: {
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
-  },
-  categoryChipsContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 10,
-  },
-  categoryChip: {
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderRadius: 16,
-    backgroundColor: '#f8f8f8',
-    marginRight: 10,
-  },
-  categoryChipActive: {
-    backgroundColor: '#FF9500',
-  },
-  categoryChipText: {
-    fontSize: 13,
-    color: '#666',
+  clearAllText: {
+    fontSize: 12,
+    color: '#FF3B30',
     fontWeight: '600',
-  },
-  categoryChipTextActive: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-  statusFilterContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
-    gap: 10,
-  },
-  statusChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#f8f8f8',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  statusChipActive: {
-    backgroundColor: '#FF9500',
-    borderColor: '#FF9500',
-  },
-  statusChipText: {
-    fontSize: 13,
-    color: '#666',
-    fontWeight: '600',
-  },
-  statusChipTextActive: {
-    color: '#fff',
-    fontWeight: '700',
   },
   listContent: {
-    paddingTop: 12,
-    paddingBottom: 20,
+    paddingTop: 8,
+    paddingBottom: 80,
   },
   emptyListContent: {
     flex: 1,
@@ -853,6 +760,28 @@ const styles = StyleSheet.create({
   footer: {
     padding: 16,
     paddingTop: 8,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#007AFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  fabIcon: {
+    fontSize: 28,
+    color: '#fff',
+    fontWeight: '600',
+    lineHeight: 30,
   },
   modalOverlay: {
     flex: 1,
