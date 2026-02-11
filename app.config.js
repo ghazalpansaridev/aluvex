@@ -5,7 +5,6 @@ if (process.env.NODE_ENV !== 'production') {
   console.log('Loading environment variables...');
   console.log('EXPO_PUBLIC_SUPABASE_URL:', process.env.EXPO_PUBLIC_SUPABASE_URL ? '✓ Set' : '✗ Missing');
   console.log('EXPO_PUBLIC_SUPABASE_ANON_KEY:', process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ? '✓ Set' : '✗ Missing');
-  console.log('EXPO_PUBLIC_PROJECT_ID:', process.env.EXPO_PUBLIC_PROJECT_ID ? '✓ Set' : '✗ Not Set (OK for Expo Go)');
 }
 
 module.exports = {
@@ -13,12 +12,12 @@ module.exports = {
     name: "Fittmart",
     scheme: "fittmart",
     slug: "fittmart",
-    owner: "ghazalpansari",
+    owner: "ghazalp",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
-    newArchEnabled: true,
+    newArchEnabled: false,
     splash: {
       image: "./assets/splash-icon.png",
       resizeMode: "contain",
@@ -29,10 +28,16 @@ module.exports = {
     },
     android: {
       package: "com.fittmart.app",
+      googleServicesFile: "./google-services.json",
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#ffffff"
       },
+      permissions: [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "POST_NOTIFICATIONS"
+      ],
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false
     },
@@ -42,17 +47,24 @@ module.exports = {
     },
     plugins: [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-font",
+      "@react-native-firebase/app",
+      [
+        "expo-notifications",
+        {
+          icon: "./assets/icon.png",
+          color: "#007AFF",
+          sounds: []
+        }
+      ]
     ],
     extra: {
       eas: {
-        projectId: "c3b4d61e-f7ae-449d-a4db-1e90130f02ed"
+        projectId: "73bf7a68-d40a-49ab-baf8-f69c8bf1dd77"
       },
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
-      projectId: process.env.EXPO_PUBLIC_PROJECT_ID,
     },
   },
 };
-
-
