@@ -3,10 +3,12 @@ import * as Device from 'expo-device';
 import { Platform, Alert } from 'react-native';
 import { supabase } from './supabase';
 
-// FCM only on Android (native module)
-const messaging = Platform.OS === 'android'
-  ? require('@react-native-firebase/messaging').default
+// FCM only on Android (native module). Use module for statics (AuthorizationStatus).
+const firebaseMessaging = Platform.OS === 'android'
+  ? require('@react-native-firebase/messaging')
   : null;
+const messaging = firebaseMessaging?.default ?? null;
+const AuthorizationStatus = firebaseMessaging?.AuthorizationStatus ?? null;
 
 // Configure notification handler (used for display when FCM delivers to foreground on Android too)
 Notifications.setNotificationHandler({
@@ -48,9 +50,10 @@ export const pushNotifications = {
   async registerFCM(userId: string): Promise<string | null> {
     try {
       const authStatus = await messaging().requestPermission();
-      const enabled =
-        authStatus === messaging().AuthorizationStatus.AUTHORIZED ||
-        authStatus === messaging().AuthorizationStatus.PROVISIONAL;
+      const authorized = AuthorizationStatus
+        ? (authStatus === AuthorizationStatus.AUTHORIZED || authStatus === AuthorizationStatus.PROVISIONAL)
+        : (authStatus === 1 || authStatus === 2); // 1=AUTHORIZED, 2=PROVISIONAL
+      const enabled = authorized;
       if (!enabled) {
         console.log('❌ [Push] FCM permission denied');
         Alert.alert(

@@ -211,6 +211,18 @@ SELECT * FROM push_tokens WHERE user_id = 'YOUR_USER_ID';
 - Edge Function successfully calling Expo Push API
 - Check Edge Function logs for errors
 
+### Issue 6: Android FCM — registration OK but no notification on device
+**Debug steps**:
+1. **Redeploy the Edge Function** (it now returns `push_results` and logs each FCM response):
+   ```bash
+   supabase functions deploy send-notification --no-verify-jwt
+   ```
+2. **Send a test notification**. In the **response body** look at `push_results`: each FCM send has `ok: true/false` and `error` if FCM rejected it.
+3. **Check Supabase logs**: Dashboard → Edge Functions → send-notification → Logs. Look for `FCM project_id`, `FCM accepted` or `FCM rejected: ...`.
+4. **Verify FCM secrets** (Supabase → Project Settings → Edge Functions → Secrets): `FCM_PROJECT_ID` = Firebase project ID (same as `project_id` in `google-services.json`, e.g. `fittmart`); `FCM_CLIENT_EMAIL` and `FCM_PRIVATE_KEY` from Firebase Console → Service accounts.
+5. **App in background**: Put app in background or kill it, then send again — system tray often shows only when app is not in foreground.
+6. **Device**: Disable battery optimization for the app; allow notifications for "default" channel.
+
 ---
 
 ## Manual Testing Queries

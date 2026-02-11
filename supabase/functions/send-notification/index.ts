@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { SignJWT } from 'https://esm.sh/jose@5.9.6';
+import { create } from 'https://deno.land/x/djwt@v3.0.2/mod.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -20,46 +20,67 @@ async function getFcmAccessToken(): Promise<string> {
   if (!fcmClientEmail || !fcmPrivateKey) {
     throw new Error('FCM_CLIENT_EMAIL and FCM_PRIVATE_KEY must be set');
   }
-  const key = await crypto.subtle.importKey(
-    'pkcs8',
-    pemToArrayBuffer(fcmPrivateKey),
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const now = Math.floor(Date.now() / 1000);
-  const jwt = await new SignJWT({})
-    .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
-    .setIssuer(fcmClientEmail)
-    .setSubject(fcmClientEmail)
-    .setAudience('https://oauth2.googleapis.com/token')
-    .setIssuedAt(now)
-    .setExpirationTime(now + 3600)
-    .sign(key);
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      assertion: jwt,
-    }),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`FCM OAuth2 failed: ${res.status} ${text}`);
+  
+  try {
+    // Unescape JSON-encoded newlines if present (Firebase service account keys often have \n as \\n)
+    const privateKeyPem = fcmPrivateKey.replace(/\\n/g, '\n');
+    console.log('🔑 [Edge Function] Importing FCM private key...');
+    
+    // Parse PEM format to get the key data
+    const pemContents = privateKeyPem
+      .replace(/-----BEGIN PRIVATE KEY-----/g, '')
+      .replace(/-----END PRIVATE KEY-----/g, '')
+      .replace(/\s/g, '');
+    
+    const binaryKey = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+    
+    // Import the key using Web Crypto API
+    const cryptoKey = await crypto.subtle.importKey(
+      'pkcs8',
+      binaryKey,
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+      true,
+      ['sign']
+    );
+    console.log('✅ [Edge Function] Private key imported successfully');
+    
+    console.log('🔑 [Edge Function] Generating JWT...');
+    const now = Math.floor(Date.now() / 1000);
+    
+    const header = { alg: 'RS256', typ: 'JWT' };
+    const payload = {
+      iss: fcmClientEmail,
+      scope: 'https://www.googleapis.com/auth/firebase.messaging',
+      aud: 'https://oauth2.googleapis.com/token',
+      iat: now,
+      exp: now + 3600,
+    };
+    
+    const jwt = await create(header, payload, cryptoKey);
+    console.log('✅ [Edge Function] JWT signed successfully');
+    
+    console.log('🔑 [Edge Function] Requesting OAuth2 token...');
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+        assertion: jwt,
+      }),
+    });
+    
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`FCM OAuth2 failed: ${res.status} ${text}`);
+    }
+    
+    const json = await res.json();
+    console.log('✅ [Edge Function] FCM access token obtained successfully');
+    return json.access_token;
+  } catch (error) {
+    console.error('❌ [Edge Function] FCM access token generation failed:', error);
+    throw new Error(`Failed to get FCM access token: ${error instanceof Error ? error.message : String(error)}`);
   }
-  const json = await res.json();
-  return json.access_token;
-}
-
-function pemToArrayBuffer(pem: string): ArrayBuffer {
-  const normalized = pem.replace(/\\n/g, '\n');
-  const lines = normalized
-    .replace(/-----BEGIN PRIVATE KEY-----/g, '')
-    .replace(/-----END PRIVATE KEY-----/g, '')
-    .replace(/\s/g, '');
-  const binary = Uint8Array.from(atob(lines), (c) => c.charCodeAt(0));
-  return binary.buffer;
 }
 
 async function sendFcm(
@@ -96,7 +117,12 @@ async function sendFcm(
   });
   if (!res.ok) {
     const text = await res.text();
-    return { ok: false, error: `${res.status}: ${text}` };
+    let errDetail = text;
+    try {
+      const j = JSON.parse(text);
+      errDetail = j.error?.message ?? j.error?.code ?? text;
+    } catch (_) {}
+    return { ok: false, error: `${res.status}: ${errDetail}` };
   }
   return { ok: true };
 }
@@ -165,6 +191,7 @@ serve(async (req) => {
 
     if (fcmTokens.length > 0 && fcmProjectId && fcmClientEmail && fcmPrivateKey) {
       try {
+        console.log('🔧 [Edge Function] FCM project_id:', fcmProjectId, '| token count:', fcmTokens.length);
         const accessToken = await getFcmAccessToken();
         for (const row of fcmTokens) {
           const result = await sendFcm(
@@ -175,14 +202,20 @@ serve(async (req) => {
             data
           );
           pushResults.push({ provider: 'fcm', ok: result.ok, error: result.error });
+          if (result.ok) {
+            console.log('✅ [Edge Function] FCM accepted for token', row.fcm_token.substring(0, 20) + '...');
+          } else {
+            console.error('❌ [Edge Function] FCM rejected:', result.error, '| token:', row.fcm_token.substring(0, 30) + '...');
+          }
           if (!result.ok) pushSuccess = false;
         }
-        console.log('✅ [Edge Function] FCM push sent to', fcmTokens.length, 'token(s)');
       } catch (e) {
         console.error('❌ [Edge Function] FCM send failed:', e);
         pushResults.push({ provider: 'fcm', ok: false, error: String(e) });
         pushSuccess = false;
       }
+    } else if (fcmTokens.length > 0) {
+      console.warn('⚠️ [Edge Function] FCM tokens present but FCM not configured: projectId=', !!fcmProjectId, 'clientEmail=', !!fcmClientEmail, 'privateKey=', !!fcmPrivateKey);
     }
 
     if (expoTokens.length > 0) {
@@ -226,6 +259,7 @@ serve(async (req) => {
         notification,
         push_tokens_found: (tokens?.length ?? 0),
         push_sent: pushResults.some((r) => r.ok),
+        push_results: pushResults,
       }),
       {
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },

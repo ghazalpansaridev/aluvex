@@ -38,6 +38,7 @@ function withFirebaseManifestMerge(config) {
     // #endregion
     if (!Array.isArray(metaData)) return config;
 
+    const TARGET_NAME = 'com.google.firebase.messaging.default_notification_color';
     let found = false;
     for (const entry of metaData) {
       if (!entry.$) continue;
@@ -47,14 +48,26 @@ function withFirebaseManifestMerge(config) {
         debugLog({ hypothesisId: 'H3', location: 'fix-firebase-manifest.js:entry-check', message: 'firebase/notif meta-data', data: { nameVal, allKeys: Object.keys(entry.$) } });
       }
       // #endregion
-      if (nameVal === 'com.google.firebase.messaging.default_notification_color') {
+      if (nameVal === TARGET_NAME) {
         entry.$['tools:replace'] = 'android:resource';
         found = true;
         // #region agent log
-        debugLog({ hypothesisId: 'H1', hypothesisId: 'H4', location: 'fix-firebase-manifest.js:replaced', message: 'added tools:replace', data: { nameVal } });
+        debugLog({ hypothesisId: 'H4', location: 'fix-firebase-manifest.js:replaced', message: 'added tools:replace', data: { nameVal } });
         // #endregion
         break;
       }
+    }
+    // Target meta-data is added by a plugin that runs after us or by library merge;
+    // add it ourselves with tools:replace so the app manifest wins in Gradle merge.
+    if (!found) {
+      metaData.push({
+        $: {
+          'android:name': TARGET_NAME,
+          'android:resource': '@color/notification_icon_color',
+          'tools:replace': 'android:resource',
+        },
+      });
+      debugLog({ hypothesisId: 'H5', location: 'fix-firebase-manifest.js:injected', message: 'injected meta-data with tools:replace', data: {} });
     }
     // #region agent log
     debugLog({ hypothesisId: 'H1', location: 'fix-firebase-manifest.js:exit', message: 'plugin exit', data: { found } });
