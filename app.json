@@ -3,7 +3,6 @@
     "name": "Fittmart",
     "scheme": "fittmart",
     "slug": "fittmart",
-    "owner": "ghazalpansari",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
