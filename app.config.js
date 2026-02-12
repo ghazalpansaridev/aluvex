@@ -57,7 +57,8 @@ module.exports = {
           color: "#007AFF",
           sounds: []
         }
-      ]
+      ],
+      "./plugins/fix-firebase-manifest.js"
     ],
     extra: {
       eas: {
