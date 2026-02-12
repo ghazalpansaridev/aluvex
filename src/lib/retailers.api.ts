@@ -49,7 +49,7 @@ export async function fetchRetailerById(
     }
 
     if (!data || data.length === 0) {
-      return { data: null, error: 'Retailer not found' };
+      return { data: null, error: 'Customer not found' };
     }
 
     // RPC returns array, take first

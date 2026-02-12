@@ -113,9 +113,9 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
-        name="sellers"
+        name="customers"
         options={{
-          title: 'Sellers',
+          title: 'Customer Management',
           headerShown: false,
           href: null,
         }}

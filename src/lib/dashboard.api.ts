@@ -299,7 +299,7 @@ export async function getTopSellingItems(limit: number): Promise<ItemData[]> {
 
   const { data: items, error: itemsError } = await supabase
     .from('items')
-    .select('id, name, category_id')
+    .select('id, name, category_id, images:item_images(image_url, is_primary)')
     .in('id', itemIds);
 
   if (itemsError) throw itemsError;
@@ -314,7 +314,7 @@ export async function getTopSellingItems(limit: number): Promise<ItemData[]> {
 
   const agg: Record<
     string,
-    { name: string; category: string; quantity: number; revenue: number }
+    { name: string; category: string; quantity: number; revenue: number; image_url?: string }
   > = {};
 
   for (const oi of filtered) {
@@ -322,11 +322,17 @@ export async function getTopSellingItems(limit: number): Promise<ItemData[]> {
     if (!item) continue;
     const key = item.id;
     if (!agg[key]) {
+      // Get primary image or first image
+      const images = (item as any).images || [];
+      const primaryImage = images.find((img: any) => img.is_primary);
+      const imageUrl = primaryImage?.image_url || images[0]?.image_url;
+      
       agg[key] = {
         name: item.name,
         category: categoryMap.get(item.category_id) ?? 'Other',
         quantity: 0,
         revenue: 0,
+        image_url: imageUrl,
       };
     }
     agg[key].quantity += oi.quantity ?? 0;
@@ -336,7 +342,13 @@ export async function getTopSellingItems(limit: number): Promise<ItemData[]> {
   return Object.values(agg)
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, limit)
-    .map((o) => ({ name: o.name, category: o.category, quantity: o.quantity, revenue: o.revenue }));
+    .map((o) => ({ 
+      name: o.name, 
+      category: o.category, 
+      quantity: o.quantity, 
+      revenue: o.revenue,
+      image_url: o.image_url 
+    }));
 }
 
 /**

@@ -161,10 +161,10 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: dashboardTheme.textPrimary,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   chartWrap: {
     backgroundColor: dashboardTheme.cardBg,

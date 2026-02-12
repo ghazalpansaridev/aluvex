@@ -159,10 +159,10 @@ export const DrawerContent: React.FC<DrawerContentProps> = ({ onClose }) => {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.menuItem}
-                  onPress={() => handleNavigation('/(admin)/sellers')}
+                  onPress={() => handleNavigation('/(admin)/customers')}
                 >
                   <Ionicons name="storefront-outline" size={24} color="#333" style={styles.menuIcon} />
-                  <Text style={styles.menuText}>Sellers</Text>
+                  <Text style={styles.menuText}>Customer Management</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -185,10 +185,10 @@ export const DrawerContent: React.FC<DrawerContentProps> = ({ onClose }) => {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.menuItem}
-                  onPress={() => handleNavigation('/(ops)/sellers')}
+                  onPress={() => handleNavigation('/(ops)/customers')}
                 >
                   <Ionicons name="storefront-outline" size={24} color="#333" style={styles.menuIcon} />
-                  <Text style={styles.menuText}>Sellers</Text>
+                  <Text style={styles.menuText}>Customer Management</Text>
                 </TouchableOpacity>
               </>
             )}

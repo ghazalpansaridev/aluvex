@@ -37,7 +37,7 @@ const STATUS_BG: Record<RetailerStatus, string> = {
   rejected: '#FEE2E2',
 };
 
-export default function AdminSellersScreen() {
+export default function AdminCustomersScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabKey>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -102,14 +102,14 @@ export default function AdminSellersScreen() {
     }
   };
 
-  const handleSellerPress = (retailer: RetailerWithEmail) => {
-    router.push(`/(admin)/sellers/${retailer.id}` as any);
+  const handleCustomerPress = (retailer: RetailerWithEmail) => {
+    router.push(`/(admin)/customers/${retailer.id}` as any);
   };
 
-  const renderSellerItem = ({ item }: { item: RetailerWithEmail }) => (
+  const renderCustomerItem = ({ item }: { item: RetailerWithEmail }) => (
     <TouchableOpacity
-      style={styles.sellerRow}
-      onPress={() => handleSellerPress(item)}
+      style={styles.customerRow}
+      onPress={() => handleCustomerPress(item)}
       activeOpacity={0.7}
     >
       {/* Avatar */}
@@ -130,7 +130,7 @@ export default function AdminSellersScreen() {
       </View>
 
       {/* Info */}
-      <View style={styles.sellerInfo}>
+      <View style={styles.customerInfo}>
         <Text style={styles.businessName} numberOfLines={1}>
           {item.business_name}
         </Text>
@@ -166,9 +166,9 @@ export default function AdminSellersScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Seller Management</Text>
+        <Text style={styles.title}>Customer Management</Text>
         <Text style={styles.subtitle}>
-          {retailers.length} seller{retailers.length !== 1 ? 's' : ''}
+          {retailers.length} customer{retailers.length !== 1 ? 's' : ''}
         </Text>
       </View>
 
@@ -211,7 +211,7 @@ export default function AdminSellersScreen() {
       {/* List */}
       <FlatList
         data={filteredRetailers}
-        renderItem={renderSellerItem}
+        renderItem={renderCustomerItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={
           filteredRetailers.length === 0 ? styles.emptyContainer : styles.listContainer
@@ -223,21 +223,21 @@ export default function AdminSellersScreen() {
           <EmptyState
             title={
               searchQuery
-                ? 'No sellers match your search'
+                ? 'No customers match your search'
                 : activeTab === 'pending'
                 ? 'No pending applications'
                 : activeTab === 'approved'
-                ? 'No approved sellers'
+                ? 'No approved customers'
                 : activeTab === 'rejected'
                 ? 'No rejected applications'
-                : 'No sellers found'
+                : 'No customers found'
             }
             description={
               searchQuery
                 ? 'Try adjusting your search terms'
                 : activeTab === 'pending'
                 ? 'All applications have been reviewed'
-                : 'Sellers will appear here once they register'
+                : 'Customers will appear here once they register'
             }
             icon="storefront-outline"
           />
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   emptyContainer: {
     flex: 1,
   },
-  sellerRow: {
+  customerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
   },
-  sellerInfo: {
+  customerInfo: {
     flex: 1,
     marginRight: 8,
   },

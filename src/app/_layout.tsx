@@ -38,7 +38,7 @@ function PushNotificationInitializer() {
             if (related_entity_type === 'order') {
               router.push(`/(ops)/orders/${related_entity_id}`);
             } else if (related_entity_type === 'user') {
-              router.push(`/(ops)/sellers/${related_entity_id}`);
+              router.push(`/(ops)/customers/${related_entity_id}`);
             }
           } else if (role === 'sales') {
             if (related_entity_type === 'order') {

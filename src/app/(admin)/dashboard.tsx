@@ -14,7 +14,6 @@ import {
   OrderStatusChart,
   TopItemsChart,
   CategoryChart,
-  RetailerPieChart,
   dashboardTheme,
 } from '../../components/dashboard';
 import { LoadingSpinner, Select } from '../../components/ui';
@@ -25,7 +24,6 @@ import {
   getOrderStatusBreakdown,
   getTopSellingItems,
   getCategoryPerformance,
-  getRetailerStats,
 } from '../../lib/dashboard.api';
 import type {
   DashboardMetrics,
@@ -33,7 +31,6 @@ import type {
   StatusData,
   ItemData,
   CategoryData,
-  RetailerStats as RetailerStatsType,
 } from '../../types/dashboard';
 
 export type TrendPeriod = 'weekly' | 'monthly' | 'yearly';
@@ -57,7 +54,6 @@ export default function AdminDashboardScreen() {
   const [orderStatus, setOrderStatus] = useState<StatusData[]>([]);
   const [topItems, setTopItems] = useState<ItemData[]>([]);
   const [categoryPerf, setCategoryPerf] = useState<CategoryData[]>([]);
-  const [retailerStats, setRetailerStats] = useState<RetailerStatsType | null>(null);
 
   const [trendPeriod, setTrendPeriod] = useState<TrendPeriod>('monthly');
   const [loading, setLoading] = useState(true);
@@ -74,7 +70,6 @@ export default function AdminDashboardScreen() {
         statusRes,
         itemsRes,
         categoryRes,
-        retailersRes,
       ] = await Promise.all([
         getKeyMetrics(),
         getRevenueTrend(trendPeriod),
@@ -82,7 +77,6 @@ export default function AdminDashboardScreen() {
         getOrderStatusBreakdown(),
         getTopSellingItems(5),
         getCategoryPerformance(),
-        getRetailerStats(),
       ]);
       setMetrics(metricsRes);
       setRevenueTrend(revenueRes);
@@ -90,7 +84,6 @@ export default function AdminDashboardScreen() {
       setOrderStatus(statusRes);
       setTopItems(itemsRes);
       setCategoryPerf(categoryRes);
-      setRetailerStats(retailersRes);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load dashboard');
     } finally {
@@ -177,6 +170,7 @@ export default function AdminDashboardScreen() {
             value={trendPeriod}
             options={TREND_PERIOD_OPTIONS}
             onChange={(value) => setTrendPeriod(value as TrendPeriod)}
+            compact
           />
         </View>
       </View>
@@ -186,9 +180,6 @@ export default function AdminDashboardScreen() {
       <OrderStatusChart data={orderStatus} loading={loading} />
       <TopItemsChart data={topItems} loading={loading} />
       <CategoryChart data={categoryPerf} loading={loading} />
-      {retailerStats && (
-        <RetailerPieChart data={retailerStats} loading={loading} />
-      )}
 
       <View style={styles.bottomPad} />
     </ScrollView>
@@ -223,17 +214,18 @@ const styles = StyleSheet.create({
     color: dashboardTheme.textSecondary,
   },
   trendSection: {
-    marginBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   trendSectionTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: dashboardTheme.textPrimary,
-    marginBottom: 8,
   },
   trendDropdownWrap: {
-    maxWidth: 220,
-    marginBottom: 4,
+    minWidth: 120,
   },
   errorContainer: {
     flex: 1,

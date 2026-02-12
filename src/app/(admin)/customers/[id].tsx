@@ -44,7 +44,7 @@ const STATUS_BANNER: Record<RetailerStatus, { bg: string; text: string; icon: st
   rejected: { bg: '#FEE2E2', text: '#991B1B', icon: 'close-circle-outline' },
 };
 
-export default function SellerDetailScreen() {
+export default function CustomerDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -128,12 +128,12 @@ export default function SellerDetailScreen() {
         Alert.alert('Error', updateError);
         return;
       }
-      Alert.alert('Success', 'Seller details updated successfully');
+      Alert.alert('Success', 'Customer details updated successfully');
       setIsEditing(false);
       setEditData({});
       refetch();
     } catch (err) {
-      Alert.alert('Error', 'Failed to update seller details');
+      Alert.alert('Error', 'Failed to update customer details');
     } finally {
       setSaving(false);
     }
@@ -176,7 +176,7 @@ export default function SellerDetailScreen() {
                 setApproving(false);
                 return;
               }
-              Alert.alert('Success', 'Seller has been approved', [
+              Alert.alert('Success', 'Customer has been approved', [
                 { text: 'OK', onPress: () => { refetch(); setShowApprovalSection(false); } },
               ]);
               setApproving(false);
@@ -185,7 +185,7 @@ export default function SellerDetailScreen() {
         ]
       );
     } catch (err) {
-      Alert.alert('Error', 'Failed to approve seller');
+      Alert.alert('Error', 'Failed to approve customer');
       setApproving(false);
     }
   };
@@ -223,7 +223,7 @@ export default function SellerDetailScreen() {
                 setRejecting(false);
                 return;
               }
-              Alert.alert('Success', 'Seller has been rejected', [
+              Alert.alert('Success', 'Customer has been rejected', [
                 { text: 'OK', onPress: () => { refetch(); setShowRejectSection(false); } },
               ]);
               setRejecting(false);
@@ -232,7 +232,7 @@ export default function SellerDetailScreen() {
         ]
       );
     } catch (err) {
-      Alert.alert('Error', 'Failed to reject seller');
+      Alert.alert('Error', 'Failed to reject customer');
       setRejecting(false);
     }
   };
@@ -275,7 +275,7 @@ export default function SellerDetailScreen() {
   if (error || !retailer) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error || 'Seller not found'}</Text>
+        <Text style={styles.errorText}>{error || 'Customer not found'}</Text>
         <Button title="Go Back" onPress={() => router.back()} variant="outline" />
       </View>
     );
@@ -304,7 +304,7 @@ export default function SellerDetailScreen() {
             {retailer.status === 'pending'
               ? 'Pending Verification'
               : retailer.status === 'approved'
-              ? 'Approved Seller'
+              ? 'Approved Customer'
               : 'Rejected Application'}
           </Text>
           {retailer.retailer_code && (
@@ -486,7 +486,7 @@ export default function SellerDetailScreen() {
           )}
         </Card>
 
-        {/* Section 4: Credit & Payment (for approved sellers or edit mode) */}
+        {/* Section 4: Credit & Payment (for approved customers or edit mode) */}
         {(retailer.status === 'approved' || isEditing) && (
           <Card style={styles.section}>
             <Text style={styles.sectionTitle}>Credit & Payment</Text>
@@ -557,7 +557,7 @@ export default function SellerDetailScreen() {
         {/* Approval Section (inline, shown on Approve click) */}
         {showApprovalSection && retailer.status === 'pending' && (
           <Card style={[styles.section, styles.approvalCard]}>
-            <Text style={styles.sectionTitle}>Approve Seller</Text>
+            <Text style={styles.sectionTitle}>Approve Customer</Text>
 
             {/* Credit line checkbox */}
             <TouchableOpacity
@@ -571,7 +571,7 @@ export default function SellerDetailScreen() {
               <View style={[styles.checkbox, assignCredit && styles.checkboxChecked]}>
                 {assignCredit && <Text style={styles.checkmark}>✓</Text>}
               </View>
-              <Text style={styles.checkboxLabel}>Assign credit line to this seller</Text>
+              <Text style={styles.checkboxLabel}>Assign credit line to this customer</Text>
             </TouchableOpacity>
 
             {assignCredit && (

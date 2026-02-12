@@ -59,9 +59,9 @@ export default function OpsLayout() {
         }}
       />
       <Tabs.Screen
-        name="sellers"
+        name="customers"
         options={{
-          title: 'Sellers',
+          title: 'Customer Management',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? 'storefront' : 'storefront-outline'}

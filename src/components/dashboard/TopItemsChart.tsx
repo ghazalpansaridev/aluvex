@@ -1,12 +1,8 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import { BarChart } from 'react-native-gifted-charts';
+import { View, Text, StyleSheet, Image } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import type { ItemData } from '../../types/dashboard';
 import { dashboardTheme } from './theme';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CHART_WIDTH = SCREEN_WIDTH - 48;
-const HORIZONTAL_CHART_CONTENT_WIDTH = CHART_WIDTH - 56;
 
 interface TopItemsChartProps {
   data: ItemData[];
@@ -14,37 +10,26 @@ interface TopItemsChartProps {
 }
 
 function formatCurrency(n: number): string {
-  if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`;
-  if (n >= 1000) return `₹${(n / 1000).toFixed(1)}K`;
-  return `₹${n}`;
-}
-
-/** Short label for inside bar (no ₹, k style) */
-function formatBarValue(n: number): string {
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
-  return String(n);
+  return `₹${Math.round(n).toLocaleString()}`;
 }
 
 export function TopItemsChart({ data, loading }: TopItemsChartProps) {
-  const { barData, legendItems } = useMemo(() => {
+  const itemCards = useMemo(() => {
+    const totalRevenue = data.reduce((sum, item) => sum + item.revenue, 0);
     const shades = [...dashboardTheme.chartBlueShades];
-    const bars = data.map((d, i) => ({
-      value: d.revenue,
-      label: ' ',
-      frontColor: shades[i % shades.length] as string,
-      barInnerComponent: () => (
-        <View style={styles.barInnerWrap}>
-          <Text numberOfLines={1} style={styles.barInnerValue}>
-            {formatBarValue(d.revenue)}
-          </Text>
-        </View>
-      ),
-    }));
-    const legend = data.map((d, i) => ({
-      name: d.name,
-      color: shades[i % shades.length] as string,
-    }));
-    return { barData: bars, legendItems: legend };
+    
+    return data.map((item, index) => {
+      const percentage = totalRevenue > 0 ? Math.round((item.revenue / totalRevenue) * 100) : 0;
+      const color = shades[index % shades.length] as string;
+      
+      return {
+        name: item.name,
+        revenue: item.revenue,
+        percentage,
+        color,
+        image_url: item.image_url,
+      };
+    });
   }, [data]);
 
   if (loading) {
@@ -56,7 +41,7 @@ export function TopItemsChart({ data, loading }: TopItemsChartProps) {
     );
   }
 
-  if (!barData.length) {
+  if (!data.length) {
     return (
       <View style={styles.container}>
         <Text style={styles.title}>Top Selling Items</Text>
@@ -67,45 +52,49 @@ export function TopItemsChart({ data, loading }: TopItemsChartProps) {
     );
   }
 
-  const maxVal = Math.max(...barData.map((d) => d.value), 1);
-
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Top Selling Items</Text>
-      <View style={styles.chartWrap}>
-        <BarChart
-          data={barData}
-          horizontal
-          width={HORIZONTAL_CHART_CONTENT_WIDTH}
-          height={220}
-          barWidth={28}
-          spacing={32}
-          initialSpacing={4}
-          endSpacing={48}
-          labelWidth={8}
-          disableScroll
-          maxValue={maxVal * 1.25}
-          noOfSections={4}
-          xAxisThickness={0}
-          yAxisThickness={0}
-          yAxisTextStyle={styles.axisLabel}
-          xAxisLabelTextStyle={styles.axisLabel}
-          formatXLabel={(v) => formatCurrency(Number(v))}
-          showValuesAsTopLabel={false}
-        />
-        <View style={styles.axisHintRow}>
-          <Text style={styles.axisHint}>Revenue →</Text>
-        </View>
-        <View style={styles.legend}>
-          {legendItems.map((item, i) => (
-            <View key={`${item.name}-${i}`} style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: item.color }]} />
-              <Text style={styles.legendText} numberOfLines={1}>
-                {item.name}
-              </Text>
+      
+      <View style={styles.cardsContainer}>
+        {itemCards.map((item, index) => (
+          <View key={`${item.name}-${index}`} style={styles.itemCard}>
+            <View style={styles.itemCardHeader}>
+              <View style={styles.itemCardLeft}>
+                <View style={[styles.iconContainer, { backgroundColor: item.image_url ? '#F7F6F4' : `${item.color}20` }]}>
+                  {item.image_url ? (
+                    <Image 
+                      source={{ uri: item.image_url }} 
+                      style={styles.productImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Ionicons name="cube" size={20} color={item.color} />
+                  )}
+                </View>
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+                  <Text style={styles.revenueLabel}>
+                    Revenue: <Text style={styles.revenueValue}>{formatCurrency(item.revenue)}</Text>
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.revenueAmount}>{formatCurrency(item.revenue)}</Text>
             </View>
-          ))}
-        </View>
+            
+            <View style={styles.performanceContainer}>
+              <Text style={styles.performanceLabel}>Performance: <Text style={styles.performanceValue}>{item.percentage}% of total</Text></Text>
+              <View style={styles.progressBackground}>
+                <View 
+                  style={[
+                    styles.progressBar, 
+                    { width: `${item.percentage}%`, backgroundColor: item.color }
+                  ]} 
+                />
+              </View>
+            </View>
+          </View>
+        ))}
       </View>
     </View>
   );
@@ -116,76 +105,100 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: dashboardTheme.textPrimary,
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  chartWrap: {
+  cardsContainer: {
+    gap: 8,
+  },
+  itemCard: {
     backgroundColor: dashboardTheme.cardBg,
-    borderRadius: 12,
+    borderRadius: 10,
     padding: 12,
-    paddingRight: 16,
     borderWidth: 1,
     borderColor: dashboardTheme.border,
+  },
+  itemCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  itemCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
     overflow: 'hidden',
+  },
+  productImage: {
+    width: '100%',
+    height: '100%',
+  },
+  itemInfo: {
+    flex: 1,
+  },
+  itemName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: dashboardTheme.textPrimary,
+    marginBottom: 3,
+  },
+  revenueLabel: {
+    fontSize: 11,
+    color: dashboardTheme.textSecondary,
+  },
+  revenueValue: {
+    fontWeight: '600',
+    color: dashboardTheme.textPrimary,
+  },
+  revenueAmount: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: dashboardTheme.textPrimary,
+  },
+  performanceContainer: {
+    gap: 5,
+  },
+  performanceLabel: {
+    fontSize: 11,
+    color: dashboardTheme.textSecondary,
+  },
+  performanceValue: {
+    fontWeight: '600',
+    color: dashboardTheme.textPrimary,
+  },
+  progressBackground: {
+    height: 6,
+    backgroundColor: dashboardTheme.placeholderBg,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: 3,
   },
   placeholder: {
     height: 200,
     backgroundColor: dashboardTheme.placeholderBg,
-    borderRadius: 10,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  skeleton: { opacity: 0.7 },
-  emptyText: { fontSize: 14, color: dashboardTheme.textMuted },
-  axisLabel: {
-    fontSize: 11,
-    color: dashboardTheme.textSecondary,
+  skeleton: { 
+    opacity: 0.7,
   },
-  axisHintRow: {
-    marginTop: 4,
-    paddingHorizontal: 2,
-  },
-  axisHint: {
-    fontSize: 10,
+  emptyText: { 
+    fontSize: 14, 
     color: dashboardTheme.textMuted,
-  },
-  barInnerWrap: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  barInnerValue: {
-    fontSize: 11,
-    color: '#FFFFFF',
-    fontWeight: '600',
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
-  },
-  legend: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 12,
-    paddingHorizontal: 2,
-    paddingBottom: 4,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    maxWidth: '48%',
-  },
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-  legendText: {
-    fontSize: 11,
-    color: dashboardTheme.textSecondary,
   },
 });

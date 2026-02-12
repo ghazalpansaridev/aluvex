@@ -27,6 +27,7 @@ export interface ItemData {
   category: string;
   quantity: number;
   revenue: number;
+  image_url?: string;
 }
 
 export interface CategoryData {

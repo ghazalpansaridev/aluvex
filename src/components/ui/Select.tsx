@@ -23,6 +23,7 @@ interface SelectProps {
   error?: string;
   required?: boolean;
   disabled?: boolean;
+  compact?: boolean;
 }
 
 export function Select({
@@ -34,12 +35,13 @@ export function Select({
   error,
   required,
   disabled,
+  compact = false,
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const selectedOption = options.find((opt) => opt.value === value);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, compact && styles.containerCompact]}>
       {label && (
         <Text style={styles.label}>
           {label}
@@ -49,6 +51,7 @@ export function Select({
       <TouchableOpacity
         style={[
           styles.selectButton,
+          compact && styles.selectButtonCompact,
           error && styles.selectError,
           disabled && styles.selectDisabled,
         ]}
@@ -56,11 +59,15 @@ export function Select({
         activeOpacity={0.7}
       >
         <Text
-          style={[styles.selectText, !selectedOption && styles.placeholder]}
+          style={[
+            styles.selectText,
+            compact && styles.selectTextCompact,
+            !selectedOption && styles.placeholder,
+          ]}
         >
           {selectedOption?.label || placeholder}
         </Text>
-        <Text style={styles.arrow}>▼</Text>
+        <Text style={[styles.arrow, compact && styles.arrowCompact]}>▼</Text>
       </TouchableOpacity>
       {error && <Text style={styles.error}>{error}</Text>}
 
@@ -112,6 +119,9 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: 16,
   },
+  containerCompact: {
+    marginBottom: 0,
+  },
   label: {
     fontSize: 14,
     fontWeight: '600',
@@ -131,6 +141,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
     padding: 15,
   },
+  selectButtonCompact: {
+    padding: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
   selectError: {
     borderColor: '#FF3B30',
   },
@@ -142,12 +157,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
+  selectTextCompact: {
+    fontSize: 13,
+  },
   placeholder: {
     color: '#999',
   },
   arrow: {
     fontSize: 12,
     color: '#666',
+  },
+  arrowCompact: {
+    fontSize: 10,
   },
   error: {
     fontSize: 12,

@@ -1,23 +1,14 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import { BarChart } from 'react-native-gifted-charts';
+import { View, Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import type { StatusData } from '../../types/dashboard';
 import { dashboardTheme } from './theme';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CHART_WIDTH = SCREEN_WIDTH - 48;
-const HORIZONTAL_CHART_CONTENT_WIDTH = CHART_WIDTH - 56;
-
 /**
- * Order Status chart — design spec
- * • Legend instead of y-axis labels (legend below chart, same order as bars)
+ * Order Status chart — card-based design
+ * • Individual cards for each status with icon, count badge, percentage, and progress bar
  * • Monochromatic blue palette (5 shades, dark → light)
- * • Values inside bars, minimal; no status text on bars
- * • Light/minimal gridlines; consistent spacing
- *
- * Blue palette (hex): #1a365d, #2c5282, #3182ce, #63b3ed, #90cdf4
- * Font hierarchy: title 15, total 12, value-in-bar 10, legend 11
- * Legend: below chart, horizontal wrap, color swatch + label (muted)
+ * • Cancelled uses grey
  */
 const STATUS_ORDER: string[] = [
   'cancelled',
@@ -35,58 +26,91 @@ const ORDER_STATUS_BLUE_PALETTE = [
   '#90cdf4', // lightest
 ] as const;
 
+type StatusConfig = {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  color: string;
+  lightColor: string;
+};
+
+const STATUS_CONFIG: Record<string, StatusConfig> = {
+  cancelled: {
+    icon: 'close-circle',
+    label: 'Cancelled',
+    color: dashboardTheme.chartGrey,
+    lightColor: '#E8E8E8',
+  },
+  placed: {
+    icon: 'checkmark-circle',
+    label: 'Placed',
+    color: '#2c5282',
+    lightColor: '#E3F2FD',
+  },
+  processing: {
+    icon: 'settings',
+    label: 'Processing',
+    color: '#3182ce',
+    lightColor: '#DBEAFE',
+  },
+  shipped: {
+    icon: 'cube',
+    label: 'Shipped',
+    color: '#63b3ed',
+    lightColor: '#BFDBFE',
+  },
+  partially_shipped: {
+    icon: 'cube-outline',
+    label: 'Partially Shipped',
+    color: '#90cdf4',
+    lightColor: '#DBEAFE',
+  },
+};
+
 interface OrderStatusChartProps {
   data: StatusData[];
   loading?: boolean;
 }
 
 export function OrderStatusChart({ data, loading }: OrderStatusChartProps) {
-  const { barData, legendItems } = useMemo(() => {
+  const statusItems = useMemo(() => {
     const byStatus = new Map(data.map((d) => [d.status, d.count]));
-    const sorted = STATUS_ORDER.map((status) => ({
-      status,
-      count: byStatus.get(status) ?? 0,
-    })).filter((d) => d.count > 0);
-
-    const cancelledColor = dashboardTheme.chartGrey;
-    const bars = sorted.map((d) => {
-      const isCancelled = d.status === 'cancelled';
-      const color = isCancelled
-        ? cancelledColor
-        : ORDER_STATUS_BLUE_PALETTE[STATUS_ORDER.indexOf(d.status) % ORDER_STATUS_BLUE_PALETTE.length];
+    const total = data.reduce((sum, d) => sum + d.count, 0);
+    
+    return STATUS_ORDER.map((status) => {
+      const count = byStatus.get(status) ?? 0;
+      const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+      const config = STATUS_CONFIG[status];
+      
       return {
-        value: d.count,
-        label: ' ',
-        frontColor: color,
-        isCancelled,
+        status,
+        count,
+        percentage,
+        ...config,
       };
     });
-
-    const legend = STATUS_ORDER.map((status) => ({
-      status,
-      label: status.replace(/_/g, ' '),
-      color:
-        status === 'cancelled'
-          ? cancelledColor
-          : ORDER_STATUS_BLUE_PALETTE[STATUS_ORDER.indexOf(status) % ORDER_STATUS_BLUE_PALETTE.length],
-    }));
-
-    return { barData: bars, legendItems: legend };
   }, [data]);
+
+  const total = useMemo(() => data.reduce((sum, d) => sum + d.count, 0), [data]);
 
   if (loading) {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Order Status</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>Order Status</Text>
+          <Text style={styles.total}>Total: 0</Text>
+        </View>
         <View style={[styles.placeholder, styles.skeleton]} />
       </View>
     );
   }
 
-  if (!barData.length || barData.every((d) => d.value === 0)) {
+  if (total === 0) {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Order Status</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>Order Status</Text>
+          <Text style={styles.total}>Total: 0</Text>
+        </View>
         <View style={styles.placeholder}>
           <Text style={styles.emptyText}>No order data</Text>
         </View>
@@ -94,63 +118,41 @@ export function OrderStatusChart({ data, loading }: OrderStatusChartProps) {
     );
   }
 
-  const total = barData.reduce((s, d) => s + d.value, 0);
-  const maxVal = Math.max(...barData.map((d) => d.value), 1);
-
-  const renderBarInner = (item: { value: number }, index: number) => {
-    const count = barData[index]?.value ?? item.value;
-    const isCancelled = barData[index]?.isCancelled ?? false;
-    return (
-      <View style={styles.barInnerWrap}>
-        <Text
-          numberOfLines={1}
-          style={[styles.barInnerValue, isCancelled && styles.barInnerValueOnGrey]}
-        >
-          {count}
-        </Text>
-      </View>
-    );
-  };
-
   return (
     <View style={styles.container}>
       <View style={styles.titleRow}>
         <Text style={styles.title}>Order Status</Text>
         <Text style={styles.total}>Total: {total}</Text>
       </View>
-      <View style={styles.chartWrap}>
-        <View style={styles.chartInner}>
-        <BarChart
-          data={barData}
-          horizontal
-          width={HORIZONTAL_CHART_CONTENT_WIDTH}
-          height={Math.max(160, barData.length * 40)}
-          barWidth={22}
-          spacing={24}
-          initialSpacing={0}
-          endSpacing={32}
-          labelWidth={0}
-          yAxisLabelWidth={0}
-          disableScroll
-          maxValue={maxVal * 1.15}
-          noOfSections={4}
-          xAxisThickness={0}
-          yAxisThickness={0}
-          hideRules
-          showValuesAsTopLabel={false}
-          barInnerComponent={renderBarInner}
-          yAxisTextStyle={styles.axisLabelStraight}
-          xAxisLabelTextStyle={styles.axisLabelStraight}
-        />
-        </View>
-        <View style={styles.legend}>
-          {legendItems.map((item) => (
-            <View key={item.status} style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: item.color }]} />
-              <Text style={styles.legendText}>{item.label}</Text>
+      
+      <View style={styles.cardsContainer}>
+        {statusItems.map((item) => (
+          <View key={item.status} style={styles.statusCard}>
+            <View style={styles.statusCardHeader}>
+              <View style={styles.statusCardLeft}>
+                <View style={[styles.iconContainer, { backgroundColor: item.lightColor }]}>
+                  <Ionicons name={item.icon} size={16} color={item.color} />
+                </View>
+                <Text style={styles.statusLabel}>{item.label}</Text>
+              </View>
+              <View style={[styles.countBadge, { backgroundColor: item.color }]}>
+                <Text style={styles.countText}>{item.count}</Text>
+              </View>
             </View>
-          ))}
-        </View>
+            
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBackground}>
+                <View 
+                  style={[
+                    styles.progressBar, 
+                    { width: `${item.percentage}%`, backgroundColor: item.color }
+                  ]} 
+                />
+              </View>
+              <Text style={styles.percentageText}>{item.percentage}%</Text>
+            </View>
+          </View>
+        ))}
       </View>
     </View>
   );
@@ -167,77 +169,95 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   title: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     color: dashboardTheme.textPrimary,
   },
   total: {
-    fontSize: 12,
+    fontSize: 11,
     color: dashboardTheme.textSecondary,
   },
-  chartWrap: {
+  cardsContainer: {
+    gap: 8,
+  },
+  statusCard: {
     backgroundColor: dashboardTheme.cardBg,
-    borderRadius: 12,
-    paddingLeft: 0,
-    paddingRight: 14,
-    paddingTop: 12,
-    paddingBottom: 12,
+    borderRadius: 10,
+    padding: 12,
     borderWidth: 1,
     borderColor: dashboardTheme.border,
-    overflow: 'hidden',
   },
-  chartInner: {
-    marginLeft: -12,
+  statusCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  placeholder: {
-    height: 200,
-    backgroundColor: dashboardTheme.placeholderBg,
+  statusCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  iconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 7,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statusLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: dashboardTheme.textPrimary,
+  },
+  countBadge: {
+    minWidth: 32,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  skeleton: { opacity: 0.7 },
-  emptyText: { fontSize: 14, color: dashboardTheme.textMuted },
-  axisLabel: { fontSize: 10, color: dashboardTheme.textSecondary },
-  axisLabelStraight: {
-    fontSize: 11,
-    color: dashboardTheme.textSecondary,
+  countText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
-  barInnerWrap: {
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  progressBackground: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-    paddingRight: 6,
+    height: 6,
+    backgroundColor: dashboardTheme.placeholderBg,
+    borderRadius: 3,
+    overflow: 'hidden',
   },
-  barInnerValue: {
-    fontSize: 8,
-    color: '#fff',
-    fontWeight: '600',
+  progressBar: {
+    height: '100%',
+    borderRadius: 3,
   },
-  barInnerValueOnGrey: {
-    color: '#1A1A1A',
-  },
-  legend: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: 14,
-    marginTop: 12,
-    paddingHorizontal: 2,
-    paddingBottom: 4,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-  legendText: {
+  percentageText: {
     fontSize: 11,
+    fontWeight: '600',
     color: dashboardTheme.textSecondary,
+    minWidth: 28,
+    textAlign: 'right',
+  },
+  placeholder: {
+    height: 200,
+    backgroundColor: dashboardTheme.placeholderBg,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  skeleton: { 
+    opacity: 0.7,
+  },
+  emptyText: { 
+    fontSize: 14, 
+    color: dashboardTheme.textMuted,
   },
 });

@@ -2,11 +2,11 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { EmptyState } from '../../../components/ui';
 
-export default function OpsSellersScreen() {
+export default function OpsCustomersScreen() {
   return (
     <View style={styles.container}>
       <EmptyState
-        title="Seller Management"
+        title="Customer Management"
         description="Review and manage retailer applications"
         icon="👥"
       />

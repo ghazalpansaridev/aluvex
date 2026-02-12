@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { HeaderLogo, BackButton } from '../../../components/ui';
 
-export default function AdminSellersLayout() {
+export default function AdminCustomersLayout() {
   return (
     <Stack
       screenOptions={{

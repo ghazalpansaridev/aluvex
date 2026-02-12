@@ -61,7 +61,7 @@ export default function OpsNotificationsScreen() {
           router.push(`/(ops)/orders/${related_entity_id}`);
           break;
         case 'user':
-          router.push(`/(ops)/sellers/${related_entity_id}`);
+          router.push(`/(ops)/customers/${related_entity_id}`);
           break;
       }
     }

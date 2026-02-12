@@ -220,3 +220,5 @@ fittmart-design/
 supabase-fittmart
 /Documents
 .mcp.json
+supabase/migrations/012_fix_get_retailers_with_email_left_join.sql
+supabase/migrations/013_fix_get_retailers_with_email_return_types.sql

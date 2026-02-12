@@ -1,11 +1,7 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import { BarChart } from 'react-native-gifted-charts';
+import { View, Text, StyleSheet } from 'react-native';
 import type { CategoryData } from '../../types/dashboard';
 import { dashboardTheme } from './theme';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CHART_WIDTH = SCREEN_WIDTH - 48;
 
 interface CategoryChartProps {
   data: CategoryData[];
@@ -13,34 +9,26 @@ interface CategoryChartProps {
 }
 
 function formatCurrency(n: number): string {
-  if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`;
-  if (n >= 1000) return `₹${(n / 1000).toFixed(1)}K`;
-  return `₹${n}`;
+  return `₹${Math.round(n).toLocaleString()}`;
 }
 
-const BAR_COLORS = [...dashboardTheme.chartBlueShades];
+const CARD_COLORS = [...dashboardTheme.chartBlueShades];
 
 export function CategoryChart({ data, loading }: CategoryChartProps) {
-  const barData = useMemo(() => {
-    return data.map((d, i) => ({
-      value: d.revenue,
-      label: '', // Hide default label
-      frontColor: BAR_COLORS[i % BAR_COLORS.length] as string,
-      topLabelComponent: () => (
-        <View style={{ marginBottom: -50 }}>
-          <Text style={{ fontSize: 10, fontWeight: '700', color: '#FFF' }}>
-            {d.revenue.toLocaleString()}
-          </Text>
-        </View>
-      ),
-      labelComponent: () => (
-        <View style={{ transform: [{ rotate: '-45deg' }], width: 60, marginLeft: -15 }}>
-          <Text style={{ fontSize: 10, color: dashboardTheme.textSecondary, textAlign: 'left' }}>
-            {d.name.length > 12 ? d.name.slice(0, 11) + '…' : d.name}
-          </Text>
-        </View>
-      ),
-    }));
+  const categoryCards = useMemo(() => {
+    const totalRevenue = data.reduce((sum, cat) => sum + cat.revenue, 0);
+    
+    return data.map((cat, index) => {
+      const percentage = totalRevenue > 0 ? ((cat.revenue / totalRevenue) * 100).toFixed(1) : '0';
+      const color = CARD_COLORS[index % CARD_COLORS.length] as string;
+      
+      return {
+        name: cat.name,
+        revenue: cat.revenue,
+        percentage,
+        color,
+      };
+    });
   }, [data]);
 
   if (loading) {
@@ -52,7 +40,7 @@ export function CategoryChart({ data, loading }: CategoryChartProps) {
     );
   }
 
-  if (!barData.length) {
+  if (!data.length) {
     return (
       <View style={styles.container}>
         <Text style={styles.title}>Category Performance</Text>
@@ -63,34 +51,29 @@ export function CategoryChart({ data, loading }: CategoryChartProps) {
     );
   }
 
-  const maxVal = Math.max(...barData.map((d) => d.value), 1);
-  const n = barData.length;
-  const initialSpacing = 20;
-  const endSpacing = 20;
-  const available = CHART_WIDTH - initialSpacing - endSpacing;
-  const barWidth = Math.min(40, Math.floor((available - Math.max(0, n - 1) * 4) / n));
-  const spacing = n > 1 ? (available - barWidth * n) / (n - 1) : 0;
-
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Category Performance</Text>
-      <View style={styles.chartWrap}>
-        <BarChart
-          data={barData}
-          width={CHART_WIDTH}
-          height={200}
-          barWidth={barWidth}
-          spacing={spacing}
-          initialSpacing={initialSpacing}
-          endSpacing={endSpacing}
-          disableScroll
-          maxValue={maxVal * 1.05}
-          noOfSections={4}
-          xAxisThickness={0}
-          yAxisThickness={0}
-          yAxisTextStyle={{ fontSize: 10, color: dashboardTheme.textSecondary }}
-          formatYLabel={(v) => formatCurrency(Number(v))}
-        />
+      
+      <View style={styles.gridContainer}>
+        {categoryCards.map((cat, index) => (
+          <View key={`${cat.name}-${index}`} style={styles.categoryCard}>
+            <Text style={styles.categoryName} numberOfLines={1}>{cat.name}</Text>
+            
+            <Text style={styles.revenueAmount}>{formatCurrency(cat.revenue)}</Text>
+            
+            <Text style={styles.percentageText}>{cat.percentage}% of total</Text>
+            
+            <View style={styles.progressBackground}>
+              <View 
+                style={[
+                  styles.progressBar, 
+                  { width: `${cat.percentage}%`, backgroundColor: cat.color }
+                ]} 
+              />
+            </View>
+          </View>
+        ))}
       </View>
     </View>
   );
@@ -101,18 +84,50 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: dashboardTheme.textPrimary,
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  chartWrap: {
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  categoryCard: {
+    width: '48.5%',
     backgroundColor: dashboardTheme.cardBg,
     borderRadius: 10,
-    padding: 8,
-    paddingBottom: 40,
+    padding: 12,
     borderWidth: 1,
     borderColor: dashboardTheme.border,
+  },
+  categoryName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: dashboardTheme.textPrimary,
+    marginBottom: 6,
+  },
+  revenueAmount: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: dashboardTheme.textPrimary,
+    marginBottom: 5,
+  },
+  percentageText: {
+    fontSize: 11,
+    color: dashboardTheme.textSecondary,
+    marginBottom: 6,
+  },
+  progressBackground: {
+    height: 6,
+    backgroundColor: dashboardTheme.placeholderBg,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: 3,
   },
   placeholder: {
     height: 200,
@@ -121,6 +136,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  skeleton: { opacity: 0.7 },
-  emptyText: { fontSize: 14, color: dashboardTheme.textMuted },
+  skeleton: { 
+    opacity: 0.7,
+  },
+  emptyText: { 
+    fontSize: 14, 
+    color: dashboardTheme.textMuted,
+  },
 });
