@@ -24,7 +24,9 @@ module.exports = {
       backgroundColor: "#ffffff"
     },
     ios: {
-      supportsTablet: true
+      supportsTablet: true,
+      bundleIdentifier: "com.fittmart.app",
+      buildNumber: "1"
     },
     android: {
       package: "com.fittmart.app",
@@ -53,7 +55,7 @@ module.exports = {
       [
         "expo-notifications",
         {
-          icon: "./assets/icon.png",
+          icon: "./assets/notification-icon.png",
           color: "#007AFF",
           sounds: []
         }
