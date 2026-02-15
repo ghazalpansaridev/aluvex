@@ -1,0 +1,26 @@
+╔══════════════════════════════════════════════════════════╗
+║                                                          ║
+║  🚀 TO BUILD YOUR iOS APP, RUN THIS COMMAND:            ║
+║                                                          ║
+║      npm run build:ios:dev                              ║
+║                                                          ║
+╚══════════════════════════════════════════════════════════╝
+
+Your iPhone UDID (you'll need this):
+00008120-0014758A0CF8A01E
+
+What to expect:
+• EAS will ask for your Apple ID (iCloud email & password)
+• Answer "Yes" to all prompts
+• Build takes 15-20 minutes
+• You'll get a QR code to install on iPhone
+
+For detailed instructions, open: START_HERE.md
+
+═══════════════════════════════════════════════════════════
+
+COPY THIS COMMAND:
+
+npm run build:ios:dev
+
+═══════════════════════════════════════════════════════════
