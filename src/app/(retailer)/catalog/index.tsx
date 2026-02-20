@@ -4,6 +4,7 @@ import {
   StyleSheet,
   FlatList,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '../../../lib/auth-context';
@@ -30,10 +31,9 @@ export default function RetailerCatalogScreen() {
   const { retailer, retailerStatus } = useAuth();
   const { addItem, getItemQuantity, getCartItemId, updateQuantity, refetch: refetchCart } = useCart();
 
-  // Filters state
+  // Filters state - no pincode filter; restricted items are shown with an overlay instead
   const [filters, setFilters] = useState<ItemFilters>({
     status: 'active',
-    pincode: retailer?.pincode,
   });
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -70,45 +70,52 @@ export default function RetailerCatalogScreen() {
   };
 
   const handleIncrementQuantity = async (item: any) => {
-    // Check if item available in retailer's pincode
-    if (retailer?.pincode && !item.available_pincodes.includes(retailer.pincode)) {
-      console.error('Item unavailable at your location');
+    // Check if item is restricted for the retailer's pincode
+    if (retailer?.pincode && item.restricted_pincodes.includes(retailer.pincode)) {
+      Alert.alert('Not Available', 'This item is not available for delivery in your area.');
       return;
     }
-    
+
     try {
-      await addItem(item.id, 1); // Always add 1
+      await addItem(item.id, 1);
     } catch (err: any) {
-      console.error('Failed to update cart:', err.message);
+      Alert.alert('Error', 'Failed to add item to cart. Please try again.');
     }
   };
 
   const handleDecrementQuantity = async (itemId: string) => {
     const cartItemId = getCartItemId(itemId);
     if (!cartItemId) return;
-    
+
     const currentQty = getItemQuantity(itemId);
     if (currentQty > 0) {
       try {
-        await updateQuantity(cartItemId, currentQty - 1); // Decrease by 1
+        await updateQuantity(cartItemId, currentQty - 1);
       } catch (err: any) {
-        console.error('Failed to update cart:', err.message);
+        Alert.alert('Error', 'Failed to update cart. Please try again.');
       }
     }
   };
 
   const renderItem = useCallback(
-    ({ item }: { item: any }) => (
-      <ProductCard
-        item={item}
-        onPress={() => handleProductPress(item.id)}
-        showMrpOnly={isPending}
-        cartQuantity={getItemQuantity(item.id)}
-        onIncrementQuantity={() => handleIncrementQuantity(item)}
-        onDecrementQuantity={() => handleDecrementQuantity(item.id)}
-        showQuantityControls={!isPending}
-      />
-    ),
+    ({ item }: { item: any }) => {
+      const isRestricted = retailer?.pincode
+        ? item.restricted_pincodes.includes(retailer.pincode)
+        : false;
+
+      return (
+        <ProductCard
+          item={item}
+          onPress={() => handleProductPress(item.id)}
+          showMrpOnly={isPending}
+          cartQuantity={getItemQuantity(item.id)}
+          onIncrementQuantity={() => handleIncrementQuantity(item)}
+          onDecrementQuantity={() => handleDecrementQuantity(item.id)}
+          showQuantityControls={!isPending && !isRestricted}
+          isRestricted={isRestricted}
+        />
+      );
+    },
     [isPending, retailer?.pincode, getItemQuantity, getCartItemId]
   );
 
@@ -123,8 +130,6 @@ export default function RetailerCatalogScreen() {
             ? 'Try a different search term'
             : filters.categoryId || filters.subcategoryId
             ? 'No products in this category'
-            : retailer?.pincode
-            ? 'No products available in your area'
             : 'No products available'
         }
         icon="📦"

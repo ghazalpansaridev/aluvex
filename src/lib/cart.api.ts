@@ -57,8 +57,8 @@ export async function addToCart(
 
   if (retailerError) throw retailerError;
 
-  // Validate item is available in retailer's pincode
-  if (!item.available_pincodes.includes(retailer.pincode)) {
+  // Validate item is not restricted for the retailer's pincode
+  if (item.restricted_pincodes.includes(retailer.pincode)) {
     throw new Error('Item unavailable at your location');
   }
 

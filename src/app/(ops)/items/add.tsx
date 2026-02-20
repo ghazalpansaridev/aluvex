@@ -9,6 +9,7 @@ import {
   Alert,
   TouchableOpacity,
   Image,
+  TextInput,
 } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { HeaderLogo } from '../../../components/ui/HeaderLogo';
@@ -57,14 +58,6 @@ const STATUS_OPTIONS = [
   { label: 'Draft', value: 'draft' },
 ];
 
-// Available pincodes (same as ItemsFilters)
-const AVAILABLE_PINCODES = [
-  '400001', '400002', '400003', '400004', '400005', // Mumbai
-  '110001', '110002', '110003', '110004', '110005', // Delhi
-  '560001', '560002', '560003', '560004', '560005', // Bangalore
-  '600001', '600002', '600003', '600004', '600005', // Chennai
-  '700001', '700002', '700003', '700004', '700005', // Kolkata
-];
 
 interface Category {
   id: string;
@@ -95,7 +88,7 @@ export function AddItemScreenBase({ backRoute }: AddItemScreenProps = {}) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [selectedPincodes, setSelectedPincodes] = useState<string[]>([]);
+  const [restrictedPincodesInput, setRestrictedPincodesInput] = useState<string>('');
   const [images, setImages] = useState<ImageFile[]>([]);
   const [uploadingImages, setUploadingImages] = useState(false);
 
@@ -198,24 +191,34 @@ export function AddItemScreenBase({ backRoute }: AddItemScreenProps = {}) {
     setImages(images.filter((_, i) => i !== index));
   };
 
-  const togglePincode = (pincode: string) => {
-    setSelectedPincodes((prev) =>
-      prev.includes(pincode)
-        ? prev.filter((p) => p !== pincode)
-        : [...prev, pincode]
-    );
+  const parseRestrictedPincodes = (): string[] => {
+    return restrictedPincodesInput
+      .split(',')
+      .map(p => p.trim())
+      .filter(p => p.length > 0);
+  };
+
+  const validateRestrictedPincodes = (): boolean => {
+    const pincodes = parseRestrictedPincodes();
+    if (pincodes.length === 0) return true; // empty is valid (no restrictions)
+    const invalid = pincodes.filter(p => !/^\d{6}$/.test(p));
+    if (invalid.length > 0) {
+      Alert.alert(
+        'Invalid Pincodes',
+        `The following pincodes are invalid (must be exactly 6 digits):\n${invalid.join(', ')}`
+      );
+      return false;
+    }
+    return true;
   };
 
   const onSubmit = async (data: ItemFormData) => {
     console.log('Form submitted with data:', data);
-    console.log('Selected pincodes:', selectedPincodes);
+    console.log('Restricted pincodes input:', restrictedPincodesInput);
     console.log('Images:', images.length);
 
     // Validate pincodes
-    if (selectedPincodes.length === 0) {
-      Alert.alert('Validation Error', 'Please select at least one pincode');
-      return;
-    }
+    if (!validateRestrictedPincodes()) return;
 
     // Validate images
     if (images.length === 0) {
@@ -262,7 +265,7 @@ export function AddItemScreenBase({ backRoute }: AddItemScreenProps = {}) {
       // Set pincodes
       try {
         console.log('Setting pincodes...');
-        await setItemPincodes(createdItem.id, selectedPincodes, supabase);
+        await setItemPincodes(createdItem.id, parseRestrictedPincodes(), supabase);
         console.log('Pincodes set successfully');
         pincodesSet = true;
       } catch (pincodeError: any) {
@@ -529,31 +532,20 @@ export function AddItemScreenBase({ backRoute }: AddItemScreenProps = {}) {
             )}
           />
 
-          <Text style={styles.sectionTitle}>Available Pincodes</Text>
+          <Text style={styles.sectionTitle}>Restricted Pincodes</Text>
           <Text style={styles.hint}>
-            Select at least one pincode ({selectedPincodes.length} selected)
+            Enter pincodes to restrict (comma-separated). Item will NOT be sold in these areas.{'\n'}
+            e.g. 400001,400002,110001 (no spaces)
           </Text>
-          <View style={styles.pincodeContainer}>
-            {AVAILABLE_PINCODES.map((pincode) => (
-              <TouchableOpacity
-                key={pincode}
-                style={[
-                  styles.pincodeChip,
-                  selectedPincodes.includes(pincode) && styles.pincodeChipActive,
-                ]}
-                onPress={() => togglePincode(pincode)}
-              >
-                <Text
-                  style={[
-                    styles.pincodeText,
-                    selectedPincodes.includes(pincode) && styles.pincodeTextActive,
-                  ]}
-                >
-                  {pincode}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <TextInput
+            style={styles.pincodeInput}
+            value={restrictedPincodesInput}
+            onChangeText={setRestrictedPincodesInput}
+            placeholder="e.g. 400001,400002,110001"
+            keyboardType="default"
+            multiline
+            autoCapitalize="none"
+          />
 
           <Text style={styles.sectionTitle}>Item Images</Text>
           <Text style={styles.hint}>
@@ -639,31 +631,17 @@ const styles = StyleSheet.create({
   halfField: {
     flex: 1,
   },
-  pincodeContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
-  },
-  pincodeChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#f5f5f5',
+  pincodeInput: {
     borderWidth: 1,
     borderColor: '#ddd',
-  },
-  pincodeChipActive: {
-    backgroundColor: '#E3F2FD',
-    borderColor: '#007AFF',
-  },
-  pincodeText: {
+    borderRadius: 8,
+    padding: 12,
     fontSize: 14,
-    color: '#666',
-  },
-  pincodeTextActive: {
-    color: '#007AFF',
-    fontWeight: '500',
+    color: '#333',
+    backgroundColor: '#fff',
+    minHeight: 80,
+    textAlignVertical: 'top',
+    marginBottom: 16,
   },
   imageContainer: {
     flexDirection: 'row',

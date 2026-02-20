@@ -781,7 +781,7 @@ export interface ImageFile {
 }
 
 export interface ItemWithDetails extends ItemWithPrice {
-  available_pincodes?: string[];
+  restricted_pincodes?: string[];
 }
 
 // Create new item
@@ -843,7 +843,7 @@ export async function createItem(
       discount_applied: 0,
       savings: 0,
       savings_percent: 0,
-      available_pincodes: [],
+      restricted_pincodes: [],
     };
   } catch (error) {
     console.error('Error creating item:', error);
@@ -893,7 +893,7 @@ export async function updateItem(
       discount_applied: 0,
       savings: 0,
       savings_percent: 0,
-      available_pincodes: [],
+      restricted_pincodes: [],
     };
   } catch (error) {
     console.error('Error updating item:', error);
@@ -1175,7 +1175,7 @@ export async function fetchItemById(
     const savings = data.mrp - finalPrice;
     const savingsPercent = data.mrp > 0 ? (savings / data.mrp) * 100 : 0;
 
-    // Get pincodes
+    // Get restricted pincodes
     const availablePincodes = data.item_pincodes?.map((p: any) => p.pincode) || [];
 
     return {
@@ -1195,7 +1195,7 @@ export async function fetchItemById(
       discount_applied: discountPercent,
       savings: Math.round(savings * 100) / 100,
       savings_percent: Math.round(savingsPercent * 100) / 100,
-      available_pincodes: availablePincodes,
+      restricted_pincodes: availablePincodes,
     };
   } catch (error) {
     console.error('Error fetching item by ID:', error);

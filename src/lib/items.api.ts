@@ -5,7 +5,7 @@ export interface ItemWithDetails extends Item {
   category: Category;
   subcategory?: Subcategory;
   images: ItemImage[];
-  available_pincodes: string[];
+  restricted_pincodes: string[];
 }
 
 export interface ItemFilters {
@@ -72,7 +72,7 @@ export async function fetchItems(filters: ItemFilters = {}): Promise<ItemWithDet
   // Transform data to include pincodes array
   let items = (data || []).map((item: any) => ({
     ...item,
-    available_pincodes: item.item_pincodes?.map((p: any) => p.pincode) || [],
+    restricted_pincodes: item.item_pincodes?.map((p: any) => p.pincode) || [],
   }));
 
   // Client-side safety filter: Only show active items if no status filter or status is active
@@ -82,9 +82,10 @@ export async function fetchItems(filters: ItemFilters = {}): Promise<ItemWithDet
   }
 
   // Filter by pincode if provided (post-query filter)
+  // Exclude items where the retailer's pincode is in the restricted list
   if (filters.pincode) {
-    return items.filter((item: ItemWithDetails) => 
-      item.available_pincodes.includes(filters.pincode!)
+    return items.filter((item: ItemWithDetails) =>
+      !item.restricted_pincodes.includes(filters.pincode!)
     );
   }
 
@@ -115,7 +116,7 @@ export async function fetchItemById(id: string): Promise<ItemWithDetails | null>
 
   return {
     ...data,
-    available_pincodes: data.item_pincodes?.map((p: any) => p.pincode) || [],
+    restricted_pincodes: data.item_pincodes?.map((p: any) => p.pincode) || [],
   };
 }
 

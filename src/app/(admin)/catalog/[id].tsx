@@ -183,20 +183,20 @@ export default function AdminProductDetailScreen() {
           </View>
         </View>
 
-        {/* Availability */}
-        {item.available_pincodes && item.available_pincodes.length > 0 && (
+        {/* Restrictions */}
+        {item.restricted_pincodes && item.restricted_pincodes.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Available in Pincodes</Text>
+            <Text style={styles.sectionTitle}>Restricted Pincodes</Text>
             <View style={styles.pincodeContainer}>
-              {item.available_pincodes.slice(0, 10).map((pincode) => (
+              {item.restricted_pincodes.slice(0, 10).map((pincode) => (
                 <View key={pincode} style={styles.pincodeChip}>
                   <Text style={styles.pincodeText}>{pincode}</Text>
                 </View>
               ))}
-              {item.available_pincodes.length > 10 && (
+              {item.restricted_pincodes.length > 10 && (
                 <View style={styles.pincodeChip}>
                   <Text style={styles.pincodeText}>
-                    +{item.available_pincodes.length - 10} more
+                    +{item.restricted_pincodes.length - 10} more
                   </Text>
                 </View>
               )}

@@ -48,7 +48,6 @@ export function ItemsScreen({ onItemPress, onEditItem, onAddItem }: ItemsScreenP
   const [categoryFilter, setCategoryFilter] = useState<string | undefined>();
   const [subcategoryFilter, setSubcategoryFilter] = useState<string | undefined>();
   const [availabilityFilter, setAvailabilityFilter] = useState<'all' | 'in_stock' | 'out_of_stock'>('all');
-  const [pincodeFilter, setPincodeFilter] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [sortBy, setSortBy] = useState<SortOption>('latest');
 
@@ -80,7 +79,6 @@ export function ItemsScreen({ onItemPress, onEditItem, onAddItem }: ItemsScreenP
             categoryId: categoryFilter,
             subcategoryId: subcategoryFilter,
             availability: availabilityFilter,
-            pincodes: pincodeFilter.length > 0 ? pincodeFilter : undefined,
             status: statusFilter === 'all' ? undefined : statusFilter,
             search: searchQuery.trim() || undefined,
             sortBy,
@@ -111,7 +109,7 @@ export function ItemsScreen({ onItemPress, onEditItem, onAddItem }: ItemsScreenP
         setLoadingMore(false);
       }
     },
-    [categoryFilter, subcategoryFilter, availabilityFilter, pincodeFilter, statusFilter, searchQuery, sortBy]
+    [categoryFilter, subcategoryFilter, availabilityFilter, statusFilter, searchQuery, sortBy]
   );
 
   // Load categories for filter chip labels
@@ -165,7 +163,6 @@ export function ItemsScreen({ onItemPress, onEditItem, onAddItem }: ItemsScreenP
     setCategoryFilter(undefined);
     setSubcategoryFilter(undefined);
     setAvailabilityFilter('all');
-    setPincodeFilter([]);
     setStatusFilter('all');
     setSearchQuery('');
     setSortBy('latest');
@@ -177,10 +174,9 @@ export function ItemsScreen({ onItemPress, onEditItem, onAddItem }: ItemsScreenP
     if (categoryFilter) count++;
     if (subcategoryFilter) count++;
     if (availabilityFilter !== 'all') count++;
-    if (pincodeFilter.length > 0) count++;
     if (statusFilter !== 'all') count++;
     return count;
-  }, [categoryFilter, subcategoryFilter, availabilityFilter, pincodeFilter, statusFilter]);
+  }, [categoryFilter, subcategoryFilter, availabilityFilter, statusFilter]);
 
   // Build active filter chips for display
   const activeFilterChips = useMemo(() => {
@@ -222,16 +218,8 @@ export function ItemsScreen({ onItemPress, onEditItem, onAddItem }: ItemsScreenP
       });
     }
 
-    if (pincodeFilter.length > 0) {
-      chips.push({
-        key: 'pincodes',
-        label: `${pincodeFilter.length} Pincode${pincodeFilter.length > 1 ? 's' : ''}`,
-        onRemove: () => setPincodeFilter([]),
-      });
-    }
-
     return chips;
-  }, [categoryFilter, subcategoryFilter, statusFilter, availabilityFilter, pincodeFilter, allCategories]);
+  }, [categoryFilter, subcategoryFilter, statusFilter, availabilityFilter, allCategories]);
 
   // Retry handler
   const handleRetry = useCallback(() => {
@@ -641,12 +629,10 @@ export function ItemsScreen({ onItemPress, onEditItem, onAddItem }: ItemsScreenP
               categoryId={categoryFilter}
               subcategoryId={subcategoryFilter}
               availability={availabilityFilter}
-              pincodes={pincodeFilter}
               status={statusFilter}
               onCategoryChange={setCategoryFilter}
               onSubcategoryChange={setSubcategoryFilter}
               onAvailabilityChange={setAvailabilityFilter}
-              onPincodesChange={setPincodeFilter}
               onStatusChange={setStatusFilter}
               onClear={handleClearFilters}
             />

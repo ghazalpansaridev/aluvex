@@ -26,6 +26,7 @@ interface ProductCardProps {
   onIncrementQuantity?: () => void;
   onDecrementQuantity?: () => void;
   showQuantityControls?: boolean;
+  isRestricted?: boolean;
 }
 
 const { width } = Dimensions.get('window');
@@ -50,6 +51,7 @@ export function ProductCard({
   onIncrementQuantity,
   onDecrementQuantity,
   showQuantityControls = false,
+  isRestricted = false,
 }: ProductCardProps) {
   const categoryDiscount = item.category?.discount_percent || 0;
   const subcategoryDiscount = item.subcategory?.discount_percent;
@@ -84,9 +86,15 @@ export function ProductCard({
           </View>
         )}
         {/* Out of stock overlay */}
-        {isOutOfStock && (
+        {isOutOfStock && !isRestricted && (
           <View style={styles.oosOverlay}>
             <Text style={styles.oosText}>Out of Stock</Text>
+          </View>
+        )}
+        {/* Restricted / unavailable overlay */}
+        {isRestricted && (
+          <View style={styles.restrictedOverlay}>
+            <Text style={styles.restrictedText}>Not Available{'\n'}in Your Area</Text>
           </View>
         )}
       </View>
@@ -187,6 +195,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+  },
+  restrictedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  restrictedText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 18,
   },
   content: {
     padding: 12,

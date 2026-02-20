@@ -7,6 +7,7 @@ import {
   Image,
   Dimensions,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../../lib/auth-context';
@@ -67,50 +68,46 @@ export default function ProductDetailScreen() {
     ? subcategoryDiscount 
     : categoryDiscount;
   
-  // Check if item is available in retailer's pincode
-  const isAvailableInPincode = retailer?.pincode 
-    ? item.available_pincodes.includes(retailer.pincode)
-    : false;
+  // Check if item is available in retailer's pincode (not restricted)
+  const isAvailableInPincode = retailer?.pincode
+    ? !item.restricted_pincodes.includes(retailer.pincode)
+    : true;
 
   const handleAddToCart = async () => {
     if (!isAvailableInPincode) {
-      console.error('Item unavailable at your location');
+      Alert.alert('Not Available', 'This item is not available for delivery in your area.');
       return;
     }
 
     try {
       await addItem(item.id, 1);
-      console.log('Added item to cart successfully');
     } catch (err: any) {
-      console.error('Failed to add to cart:', err.message);
-      throw err;
+      Alert.alert('Error', 'Failed to add item to cart. Please try again.');
     }
   };
 
   const handleIncrementQuantity = async () => {
     if (!isAvailableInPincode) {
-      console.error('Item unavailable at your location');
+      Alert.alert('Not Available', 'This item is not available for delivery in your area.');
       return;
     }
-    
+
     try {
       await addItem(item.id, 1);
     } catch (err: any) {
-      console.error('Failed to update cart:', err.message);
-      throw err;
+      Alert.alert('Error', 'Failed to update cart. Please try again.');
     }
   };
 
   const handleDecrementQuantity = async () => {
     const cartItemId = getCartItemId(item.id);
     if (!cartItemId) return;
-    
+
     if (cartQuantity > 0) {
       try {
         await updateQuantity(cartItemId, cartQuantity - 1);
       } catch (err: any) {
-        console.error('Failed to update cart:', err.message);
-        throw err;
+        Alert.alert('Error', 'Failed to update cart. Please try again.');
       }
     }
   };
